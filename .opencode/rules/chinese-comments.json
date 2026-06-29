@@ -1,0 +1,55 @@
+{
+  "name": "中文代码注释规范",
+  "description": "代码注释使用中文，代码关键字保持英文",
+  "rules": {
+    "comments": "中文",
+    "keywords": "英文",
+    "git_commit": "中文",
+    "format": "类型(模块): 描述"
+  },
+  "examples": {
+    "good_commit": [
+      "feat(用户): 添加用户登录功能",
+      "fix(订单): 修复订单查询空指针异常",
+      "docs: 更新API文档",
+      "refactor(用户): 重构用户权限校验逻辑"
+    ],
+    "bad_commit": [
+      "add user login",
+      "Fixed a bug",
+      "添加功能"
+    ]
+  },
+  "comment_rules": {
+    "keep_english": [
+      "if/else/for/while/switch",
+      "function/class/import/export",
+      "const/let/var",
+      "return/break/continue",
+      "async/await",
+      "try/catch/throw",
+      "public/private/protected",
+      "static/final/abstract",
+      "interface/enum/type",
+      "React/Vue/Angular",
+      "Node.js/Express/Koa",
+      "SQL/NoSQL/ORM",
+      "API/SDK/DTO/VO/DAO",
+      "HTTP/HTTPS/TCP/UDP",
+      "JSON/XML/YAML",
+      "CSS/HTML/JS",
+      "npm/yarn/pnpm",
+      "git/github/gitlab"
+    ],
+    "use_chinese": [
+      "代码注释",
+      "文档字符串",
+      "日志信息",
+      "异常消息",
+      "变量说明",
+      "函数说明",
+      "类说明",
+      "模块说明"
+    ]
+  }
+}
