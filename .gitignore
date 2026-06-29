@@ -1,0 +1,12 @@
+node_modules/
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+android/app/release/
+*.log
+.idea/
+.vscode/
+screenshot_*.png
+test_app.py
+docs/

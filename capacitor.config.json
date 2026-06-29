@@ -1,0 +1,8 @@
+{
+  "appId": "com.example.investtracker",
+  "appName": "投资收益记录",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

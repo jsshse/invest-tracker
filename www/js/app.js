@@ -1,0 +1,638 @@
+/**
+ * 投资收益记录器
+ * 录入方式：每次记录日期、总金额、累计收益。
+ * 自动计算：本金、区间段收益、区间段收益率、区间段充值金额。
+ */
+
+const STORAGE_KEY = 'investTrackerData';
+const DATA_DIR = 'investTracker';
+const DATA_FILE = 'data.json';
+
+let state = {
+  channels: [],
+  currentChannelId: null,
+  editingChannelId: null,
+};
+
+/* ---------- 初始化 ---------- */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadData();
+  bindEvents();
+  renderDashboard();
+  runSelfTests();
+});
+
+/* ---------- 数据模型 ---------- */
+
+function createId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createChannel(name) {
+  return {
+    id: createId(),
+    name: name.trim(),
+    records: [],
+  };
+}
+
+function createRecord(date, totalValue, cumulativeReturn) {
+  const total = parseFloat(totalValue) || 0;
+  const cumulative = parseFloat(cumulativeReturn) || 0;
+  return {
+    id: createId(),
+    date,
+    totalValue: total,
+    cumulativeReturn: cumulative,
+    principal: 0,
+    intervalReturn: 0,
+    intervalReturnRate: 0,
+    intervalRecharge: 0,
+  };
+}
+
+/* ---------- 计算逻辑 ---------- */
+
+/**
+ * 根据前一条记录和当前输入，计算本金、区间收益、收益率、充值金额。
+ * @param {object|null} prevRecord 上一条记录
+ * @param {number} currentTotal 当前总金额
+ * @param {number} currentCumulative 当前累计收益
+ */
+function calculateRecord(prevRecord, currentTotal, currentCumulative) {
+  const principal = currentTotal - currentCumulative;
+
+  const prevTotal = prevRecord ? prevRecord.totalValue : 0;
+  const prevCumulative = prevRecord ? prevRecord.cumulativeReturn : 0;
+  const prevPrincipal = prevRecord ? (prevTotal - prevCumulative) : 0;
+
+  const intervalReturn = currentCumulative - prevCumulative;
+  const intervalRecharge = principal - prevPrincipal;
+
+  let intervalReturnRate = 0;
+  if (prevPrincipal > 0) {
+    intervalReturnRate = (intervalReturn / prevPrincipal) * 100;
+  }
+
+  return {
+    principal,
+    intervalReturn,
+    intervalReturnRate,
+    intervalRecharge,
+  };
+}
+
+/**
+ * 重新计算整个渠道所有记录的派生字段。
+ */
+function recalcChannel(channel) {
+  const sorted = channel.records.sort((a, b) => new Date(a.date) - new Date(b.date));
+  let previous = null;
+  sorted.forEach((record) => {
+    const result = calculateRecord(previous, record.totalValue, record.cumulativeReturn);
+    record.principal = result.principal;
+    record.intervalReturn = result.intervalReturn;
+    record.intervalReturnRate = result.intervalReturnRate;
+    record.intervalRecharge = result.intervalRecharge;
+    previous = record;
+  });
+  channel.records = sorted;
+}
+
+/* ---------- 持久化 ---------- */
+
+function getFilesystem() {
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+    return window.Capacitor.Plugins.Filesystem;
+  }
+  return null;
+}
+
+async function saveData() {
+  const data = JSON.stringify(state.channels);
+
+  // 本地文件持久化（手机端优先，不会被清缓存删掉）
+  const fs = getFilesystem();
+  if (fs) {
+    try {
+      await fs.writeFile({
+        path: `${DATA_DIR}/${DATA_FILE}`,
+        data,
+        directory: 'DATA',
+        recursive: true,
+        encoding: 'utf8',
+      });
+    } catch (e) {
+      console.error('Filesystem save failed:', e);
+      showToast('文件保存失败');
+    }
+  }
+
+  // 浏览器调试或降级备份
+  try {
+    localStorage.setItem(STORAGE_KEY, data);
+  } catch (e) {
+    console.error('localStorage save failed:', e);
+    if (!fs) {
+      showToast('保存失败：存储空间不足');
+    }
+  }
+}
+
+async function loadData() {
+  const fs = getFilesystem();
+
+  if (fs) {
+    try {
+      const result = await fs.readFile({
+        path: `${DATA_DIR}/${DATA_FILE}`,
+        directory: 'DATA',
+        encoding: 'utf8',
+      });
+      if (result && result.data) {
+        state.channels = JSON.parse(result.data);
+        state.channels.forEach(recalcChannel);
+        return;
+      }
+    } catch (e) {
+      // 文件不存在或读取失败，尝试 localStorage 迁移
+      console.log('Filesystem load failed, falling back to localStorage:', e);
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      state.channels = JSON.parse(raw);
+      state.channels.forEach(recalcChannel);
+      // 如果本地文件不存在但 localStorage 有数据，迁移到文件
+      if (fs && state.channels.length > 0) {
+        saveData();
+      }
+    }
+  } catch (e) {
+    console.error('Load failed:', e);
+    state.channels = [];
+  }
+}
+
+/* ---------- CRUD ---------- */
+
+async function addChannel(name) {
+  if (!name || !name.trim()) {
+    showToast('请输入渠道名称');
+    return null;
+  }
+  const channel = createChannel(name);
+  state.channels.unshift(channel);
+  await saveData();
+  return channel;
+}
+
+async function updateChannelName(id, name) {
+  const channel = state.channels.find((c) => c.id === id);
+  if (!channel) return false;
+  if (!name || !name.trim()) {
+    showToast('请输入渠道名称');
+    return false;
+  }
+  channel.name = name.trim();
+  await saveData();
+  return true;
+}
+
+async function deleteChannel(id) {
+  if (!confirm('确定要删除该渠道及其所有记录吗？')) return;
+  state.channels = state.channels.filter((c) => c.id !== id);
+  if (state.currentChannelId === id) {
+    state.currentChannelId = null;
+    showView('viewDashboard');
+  }
+  await saveData();
+  renderDashboard();
+}
+
+async function addRecord(channelId, date, totalValue, cumulativeReturn) {
+  const channel = state.channels.find((c) => c.id === channelId);
+  if (!channel) return false;
+
+  const total = parseFloat(totalValue);
+  if (isNaN(total)) {
+    showToast('请输入有效的总金额');
+    return false;
+  }
+
+  const cumulative = parseFloat(cumulativeReturn);
+  if (isNaN(cumulative)) {
+    showToast('请输入有效的累计收益');
+    return false;
+  }
+
+  if (cumulative > total) {
+    showToast('累计收益不能大于总金额');
+    return false;
+  }
+
+  const record = createRecord(date, total, cumulative);
+  channel.records.push(record);
+  recalcChannel(channel);
+  await saveData();
+  return true;
+}
+
+async function deleteRecord(channelId, recordId) {
+  const channel = state.channels.find((c) => c.id === channelId);
+  if (!channel) return;
+  if (!confirm('确定删除这条记录？')) return;
+  channel.records = channel.records.filter((r) => r.id !== recordId);
+  recalcChannel(channel);
+  await saveData();
+  renderChannelDetail(channelId);
+  renderDashboard();
+}
+
+/* ---------- 视图渲染 ---------- */
+
+function showView(viewId) {
+  document.getElementById('viewDashboard').classList.add('hidden');
+  document.getElementById('viewChannel').classList.add('hidden');
+  document.getElementById(viewId).classList.remove('hidden');
+}
+
+function formatMoney(value) {
+  const num = Number(value) || 0;
+  const sign = num > 0 ? '+' : '';
+  return `${sign}¥${num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatPercent(value) {
+  const num = Number(value) || 0;
+  const sign = num > 0 ? '+' : '';
+  return `${sign}${num.toFixed(2)}%`;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function moneyClass(value) {
+  const num = Number(value) || 0;
+  if (num > 0) return 'text-positive';
+  if (num < 0) return 'text-negative';
+  return 'text-primary';
+}
+
+function renderDashboard() {
+  const listEl = document.getElementById('channelsList');
+  const totalCumulativeEl = document.getElementById('totalCumulative');
+  const channelCountEl = document.getElementById('channelCount');
+  const recordCountEl = document.getElementById('recordCount');
+
+  let totalCumulative = 0;
+  let totalRecords = 0;
+
+  state.channels.forEach((channel) => {
+    const latest = channel.records[channel.records.length - 1];
+    if (latest) {
+      totalCumulative += latest.cumulativeReturn;
+      totalRecords += channel.records.length;
+    }
+  });
+
+  totalCumulativeEl.textContent = formatMoney(totalCumulative);
+  totalCumulativeEl.className = `text-3xl font-bold ${moneyClass(totalCumulative)}`;
+  channelCountEl.textContent = state.channels.length;
+  recordCountEl.textContent = totalRecords;
+
+  if (state.channels.length === 0) {
+    listEl.innerHTML = `
+      <div class="text-center py-10 text-muted">
+        <p class="mb-2">还没有投资渠道</p>
+        <p class="text-xs">点击右上角“新增渠道”开始记录</p>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = state.channels
+    .map((channel, index) => {
+      const latest = channel.records[channel.records.length - 1];
+      const total = latest ? latest.totalValue : 0;
+      const cumulative = latest ? latest.cumulativeReturn : 0;
+      return `
+        <div class="card rounded-xl p-4 cursor-pointer hover:border-accent/50 transition-colors animate-slide-up" 
+             style="animation-delay: ${index * 0.05}s"
+             onclick="openChannel('${channel.id}')">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold text-primary">${escapeHtml(channel.name)}</h3>
+            <span class="text-xs text-muted">${channel.records.length} 条记录</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs text-muted mb-0.5">最新资产</p>
+              <p class="text-base font-medium">${formatMoney(total)}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-muted mb-0.5">累计收益</p>
+              <p class="text-base font-bold ${moneyClass(cumulative)}">${formatMoney(cumulative)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function renderChannelDetail(channelId) {
+  const channel = state.channels.find((c) => c.id === channelId);
+  if (!channel) return;
+
+  state.currentChannelId = channelId;
+  document.getElementById('channelTitle').textContent = channel.name;
+
+  const latest = channel.records[channel.records.length - 1];
+  const total = latest ? latest.totalValue : 0;
+  const cumulative = latest ? latest.cumulativeReturn : 0;
+
+  const totalEl = document.getElementById('channelTotal');
+  const cumulativeEl = document.getElementById('channelCumulative');
+  totalEl.textContent = formatMoney(total);
+  cumulativeEl.textContent = formatMoney(cumulative);
+  cumulativeEl.className = `text-lg font-bold ${moneyClass(cumulative)}`;
+
+  const listEl = document.getElementById('recordsList');
+  if (channel.records.length === 0) {
+    listEl.innerHTML = `
+      <div class="text-center py-10 text-muted">
+        <p class="mb-2">暂无记录</p>
+        <p class="text-xs">点击“记一笔”添加第一条记录</p>
+      </div>
+    `;
+    return;
+  }
+
+  const reversed = [...channel.records].reverse();
+  listEl.innerHTML = reversed
+    .map((record, index) => {
+      return `
+        <div class="card rounded-xl p-4 animate-slide-up" style="animation-delay: ${index * 0.05}s">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-medium text-primary">${formatDate(record.date)}</span>
+            <button onclick="deleteRecord('${channelId}', '${record.id}')" 
+                    class="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded-md hover:bg-red-50 transition-colors">
+              删除
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
+            <div>
+              <p class="text-xs text-muted mb-0.5">总金额</p>
+              <p class="font-medium">${formatMoney(record.totalValue)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted mb-0.5">累计收益</p>
+              <p class="font-bold ${moneyClass(record.cumulativeReturn)}">${formatMoney(record.cumulativeReturn)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted mb-0.5">区间收益</p>
+              <p class="font-medium ${moneyClass(record.intervalReturn)}">${formatMoney(record.intervalReturn)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted mb-0.5">收益率</p>
+              <p class="font-bold ${moneyClass(record.intervalReturnRate)}">${formatPercent(record.intervalReturnRate)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted mb-0.5">充值金额</p>
+              <p class="font-medium">${formatMoney(record.intervalRecharge)}</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted mb-0.5">本金余额</p>
+              <p class="font-medium">${formatMoney(record.principal)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/* ---------- 事件绑定 ---------- */
+
+function bindEvents() {
+  document.getElementById('btnAddChannel').addEventListener('click', () => openChannelModal());
+  document.getElementById('btnExport').addEventListener('click', exportData);
+  document.getElementById('importFile').addEventListener('change', importData);
+
+  document.getElementById('channelModalOverlay').addEventListener('click', closeChannelModal);
+  document.getElementById('btnCancelChannel').addEventListener('click', closeChannelModal);
+  document.getElementById('btnSaveChannel').addEventListener('click', saveChannelFromModal);
+  document.getElementById('channelNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveChannelFromModal();
+  });
+
+  document.getElementById('btnBack').addEventListener('click', () => {
+    state.currentChannelId = null;
+    showView('viewDashboard');
+    renderDashboard();
+  });
+  document.getElementById('btnDeleteChannel').addEventListener('click', async () => {
+    if (state.currentChannelId) await deleteChannel(state.currentChannelId);
+  });
+  document.getElementById('btnAddRecord').addEventListener('click', () => openRecordModal());
+
+  document.getElementById('recordModalOverlay').addEventListener('click', closeRecordModal);
+  document.getElementById('btnCancelRecord').addEventListener('click', closeRecordModal);
+  document.getElementById('btnSaveRecord').addEventListener('click', saveRecordFromModal);
+}
+
+/* ---------- 弹窗控制 ---------- */
+
+function openChannelModal(channelId = null) {
+  state.editingChannelId = channelId;
+  const input = document.getElementById('channelNameInput');
+  const title = document.getElementById('channelModalTitle');
+
+  if (channelId) {
+    const channel = state.channels.find((c) => c.id === channelId);
+    title.textContent = '编辑渠道';
+    input.value = channel ? channel.name : '';
+  } else {
+    title.textContent = '新增渠道';
+    input.value = '';
+  }
+
+  document.getElementById('channelModal').classList.remove('hidden');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeChannelModal() {
+  document.getElementById('channelModal').classList.add('hidden');
+  state.editingChannelId = null;
+}
+
+async function saveChannelFromModal() {
+  const input = document.getElementById('channelNameInput');
+  const name = input.value.trim();
+
+  if (state.editingChannelId) {
+    if (await updateChannelName(state.editingChannelId, name)) {
+      closeChannelModal();
+      renderDashboard();
+      if (state.currentChannelId === state.editingChannelId) {
+        renderChannelDetail(state.currentChannelId);
+      }
+      showToast('渠道已更新');
+    }
+  } else {
+    const channel = await addChannel(name);
+    if (channel) {
+      closeChannelModal();
+      renderDashboard();
+      showToast('渠道已添加');
+    }
+  }
+}
+
+function openChannel(channelId) {
+  renderChannelDetail(channelId);
+  showView('viewChannel');
+}
+
+function openRecordModal() {
+  const dateInput = document.getElementById('recordDateInput');
+  const totalInput = document.getElementById('recordTotalInput');
+  const cumulativeInput = document.getElementById('recordCumulativeInput');
+
+  dateInput.value = new Date().toISOString().split('T')[0];
+  totalInput.value = '';
+  cumulativeInput.value = '';
+
+  document.getElementById('recordModal').classList.remove('hidden');
+  setTimeout(() => totalInput.focus(), 100);
+}
+
+function closeRecordModal() {
+  document.getElementById('recordModal').classList.add('hidden');
+}
+
+async function saveRecordFromModal() {
+  if (!state.currentChannelId) return;
+
+  const date = document.getElementById('recordDateInput').value;
+  const total = document.getElementById('recordTotalInput').value;
+  const cumulative = document.getElementById('recordCumulativeInput').value;
+
+  if (!date) {
+    showToast('请选择日期');
+    return;
+  }
+
+  if (await addRecord(state.currentChannelId, date, total, cumulative)) {
+    closeRecordModal();
+    renderChannelDetail(state.currentChannelId);
+    renderDashboard();
+    showToast('记录已保存');
+  }
+}
+
+/* ---------- 导入导出 ---------- */
+
+function exportData() {
+  const dataStr = JSON.stringify(state.channels, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `投资收益备份_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('数据已导出');
+}
+
+async function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('格式错误');
+      imported.forEach((c) => {
+        if (!c.id || !c.name || !Array.isArray(c.records)) throw new Error('格式错误');
+      });
+
+      if (confirm(`确定导入 ${imported.length} 个渠道的数据？当前数据将被覆盖。`)) {
+        state.channels = imported;
+        state.channels.forEach(recalcChannel);
+        await saveData();
+        renderDashboard();
+        showView('viewDashboard');
+        showToast('数据导入成功');
+      }
+    } catch (err) {
+      showToast('导入失败：文件格式不正确');
+      console.error(err);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- 提示 ---------- */
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.remove('opacity-0');
+  setTimeout(() => {
+    toast.classList.add('opacity-0');
+  }, 2200);
+}
+
+/* ---------- 自测 ---------- */
+
+function runSelfTests() {
+  const tests = [
+    {
+      name: 'first record principal equals total',
+      run: () => {
+        const r = calculateRecord(null, 10000, 0);
+        return r.principal === 10000 && r.intervalReturn === 0 && r.intervalRecharge === 10000;
+      },
+    },
+    {
+      name: 'interval return and rate calculated correctly',
+      run: () => {
+        const prev = { totalValue: 10000, cumulativeReturn: 0 };
+        const r = calculateRecord(prev, 13000, 2000);
+        // principal = 11000, prevPrincipal = 10000
+        // intervalReturn = 2000, intervalRecharge = 1000, rate = 20%
+        return r.intervalReturn === 2000 && r.intervalRecharge === 1000 && r.intervalReturnRate === 20;
+      },
+    },
+    {
+      name: 'negative return is handled',
+      run: () => {
+        const prev = { totalValue: 10000, cumulativeReturn: 0 };
+        const r = calculateRecord(prev, 9000, -500);
+        return r.intervalReturn === -500 && r.intervalRecharge === 500 && r.intervalReturnRate === -5;
+      },
+    },
+  ];
+
+  tests.forEach((t) => {
+    const passed = t.run();
+    console.log(`[${passed ? 'PASS' : 'FAIL'}] ${t.name}`);
+  });
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">投资收益记录</string>
+    <string name="title_activity_main">投资收益记录</string>
+    <string name="package_name">com.example.investtracker</string>
+    <string name="custom_url_scheme">com.example.investtracker</string>
+</resources>
