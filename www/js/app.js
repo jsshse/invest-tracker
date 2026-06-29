@@ -446,11 +446,11 @@ function renderDashboard() {
       const recordCount = channel.records.length;
       return `
         <div class="card channel-card rounded-2xl p-4 cursor-pointer animate-slide-up" 
-             style="animation-delay: ${index * 0.06}s"
+             style="animation-delay: ${index * 0.06}s; border-left: 4px solid #059669;"
              onclick="openChannel('${channel.id}')">
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-bold text-primary text-[15px]">${escapeHtml(channel.name)}</h3>
-            <span class="text-[11px] text-muted bg-bg px-2 py-1 rounded-lg">${recordCount} 条</span>
+            <span class="text-[11px] text-muted bg-gray-100 px-2 py-1 rounded-lg">${recordCount} 条</span>
           </div>
           <div class="flex items-end justify-between">
             <div>
@@ -491,7 +491,7 @@ function renderChannelDetail(channelId) {
   const cumulativeEl = document.getElementById('channelCumulative');
   totalEl.textContent = `¥${Math.abs(total).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   cumulativeEl.textContent = `¥${Math.abs(cumulative).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  cumulativeEl.className = `text-2xl font-bold num-highlight ${moneyClass(cumulative)}`;
+  cumulativeEl.className = `text-2xl font-bold num-highlight ${cumulative >= 0 ? 'text-white' : 'text-red-300'}`;
 
   const listEl = document.getElementById('recordsList');
   if (channel.records.length === 0) {
