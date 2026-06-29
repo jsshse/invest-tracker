@@ -1,0 +1,8 @@
+*.html linguist-language=HTML
+*.css linguist-language=CSS
+*.js linguist-language=JavaScript
+*.json linguist-language=JSON
+*.java linguist-language=Java
+*.gradle linguist-language=Groovy
+*.yml linguist-language=YAML
+*.xml linguist-language=XML
