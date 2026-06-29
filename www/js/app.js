@@ -291,12 +291,14 @@ function renderDashboard() {
   const recordCountEl = document.getElementById('recordCount');
   const yearReturnEl = document.getElementById('yearReturn');
   const yearRechargeEl = document.getElementById('yearRecharge');
+  const yearReturnRateEl = document.getElementById('yearReturnRate');
 
   const currentYear = new Date().getFullYear();
   let totalCumulative = 0;
   let totalRecords = 0;
   let yearReturn = 0;
   let yearRecharge = 0;
+  let principalAtStartOfYear = 0;
 
   state.channels.forEach((channel) => {
     const latest = channel.records[channel.records.length - 1];
@@ -304,13 +306,30 @@ function renderDashboard() {
       totalCumulative += latest.cumulativeReturn;
       totalRecords += channel.records.length;
     }
-    channel.records.forEach((record) => {
+
+    // Find principal at start of year (last record before current year)
+    const sortedRecords = [...channel.records].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let lastRecordBeforeYear = null;
+    let firstRecordThisYear = null;
+
+    sortedRecords.forEach((record) => {
       const recordYear = new Date(record.date).getFullYear();
+      if (recordYear < currentYear) {
+        lastRecordBeforeYear = record;
+      }
       if (recordYear === currentYear) {
         yearReturn += record.intervalReturn;
         yearRecharge += record.intervalRecharge;
+        if (!firstRecordThisYear) firstRecordThisYear = record;
       }
     });
+
+    // Use last record before year, or first record of this year if no prior records
+    if (lastRecordBeforeYear) {
+      principalAtStartOfYear += lastRecordBeforeYear.totalValue - lastRecordBeforeYear.cumulativeReturn;
+    } else if (firstRecordThisYear) {
+      principalAtStartOfYear += firstRecordThisYear.principal - firstRecordThisYear.intervalRecharge;
+    }
   });
 
   totalCumulativeEl.textContent = `¥${Math.abs(totalCumulative).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -321,6 +340,14 @@ function renderDashboard() {
   yearReturnEl.className = `text-lg font-bold num-highlight ${yearReturn >= 0 ? 'text-white' : 'text-red-300'}`;
   yearRechargeEl.textContent = `¥${Math.abs(yearRecharge).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   yearRechargeEl.className = `text-lg font-bold num-highlight ${yearRecharge >= 0 ? 'text-white' : 'text-red-300'}`;
+
+  // Calculate year return rate
+  let yearReturnRate = 0;
+  if (principalAtStartOfYear > 0) {
+    yearReturnRate = (yearReturn / principalAtStartOfYear) * 100;
+  }
+  yearReturnRateEl.textContent = `${yearReturnRate >= 0 ? '+' : ''}${yearReturnRate.toFixed(2)}%`;
+  yearReturnRateEl.className = `text-lg font-bold num-highlight ${yearReturnRate >= 0 ? 'text-white' : 'text-red-300'}`;
 
   if (state.channels.length === 0) {
     listEl.innerHTML = `
