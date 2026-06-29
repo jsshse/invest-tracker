@@ -362,7 +362,6 @@ function moneyClass(value) {
 
 function renderDashboard() {
   const listEl = document.getElementById('channelsList');
-  const totalCumulativeEl = document.getElementById('totalCumulative');
   const channelCountEl = document.getElementById('channelCount');
   const recordCountEl = document.getElementById('recordCount');
   const yearReturnEl = document.getElementById('yearReturn');
@@ -370,7 +369,6 @@ function renderDashboard() {
   const yearReturnRateEl = document.getElementById('yearReturnRate');
 
   const currentYear = new Date().getFullYear();
-  let totalCumulative = 0;
   let totalRecords = 0;
   let yearReturn = 0;
   let yearRecharge = 0;
@@ -379,7 +377,6 @@ function renderDashboard() {
   state.channels.forEach((channel) => {
     const latest = channel.records[channel.records.length - 1];
     if (latest) {
-      totalCumulative += latest.cumulativeReturn;
       totalRecords += channel.records.length;
     }
 
@@ -408,14 +405,12 @@ function renderDashboard() {
     }
   });
 
-  totalCumulativeEl.textContent = `¥${Math.abs(totalCumulative).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  totalCumulativeEl.className = `text-[42px] font-bold tracking-tight leading-none mb-4 num-highlight text-white`;
   channelCountEl.textContent = state.channels.length;
   recordCountEl.textContent = totalRecords;
   yearReturnEl.textContent = `¥${Math.abs(yearReturn).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  yearReturnEl.className = `text-lg font-bold num-highlight ${yearReturn >= 0 ? 'text-white' : 'text-red-300'}`;
+  yearReturnEl.className = `text-xl font-bold num-highlight ${yearReturn >= 0 ? 'text-white' : 'text-red-300'}`;
   yearRechargeEl.textContent = `¥${Math.abs(yearRecharge).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  yearRechargeEl.className = `text-lg font-bold num-highlight ${yearRecharge >= 0 ? 'text-white' : 'text-red-300'}`;
+  yearRechargeEl.className = `text-xl font-bold num-highlight ${yearRecharge >= 0 ? 'text-white' : 'text-red-300'}`;
 
   // Calculate year return rate
   let yearReturnRate = 0;
@@ -441,9 +436,39 @@ function renderDashboard() {
   listEl.innerHTML = state.channels
     .map((channel, index) => {
       const latest = channel.records[channel.records.length - 1];
-      const total = latest ? latest.totalValue : 0;
-      const cumulative = latest ? latest.cumulativeReturn : 0;
       const recordCount = channel.records.length;
+
+      // Calculate year stats for this channel
+      let chYearReturn = 0;
+      let chYearRecharge = 0;
+      let chPrincipalAtStart = 0;
+      const sortedRecords = [...channel.records].sort((a, b) => new Date(a.date) - new Date(b.date));
+      let lastRecordBeforeYear = null;
+      let firstRecordThisYear = null;
+
+      sortedRecords.forEach((record) => {
+        const recordYear = new Date(record.date).getFullYear();
+        if (recordYear < currentYear) {
+          lastRecordBeforeYear = record;
+        }
+        if (recordYear === currentYear) {
+          chYearReturn += record.intervalReturn;
+          chYearRecharge += record.intervalRecharge;
+          if (!firstRecordThisYear) firstRecordThisYear = record;
+        }
+      });
+
+      if (lastRecordBeforeYear) {
+        chPrincipalAtStart = lastRecordBeforeYear.totalValue - lastRecordBeforeYear.cumulativeReturn;
+      } else if (firstRecordThisYear) {
+        chPrincipalAtStart = firstRecordThisYear.principal - firstRecordThisYear.intervalRecharge;
+      }
+
+      let chYearReturnRate = 0;
+      if (chPrincipalAtStart > 0) {
+        chYearReturnRate = (chYearReturn / chPrincipalAtStart) * 100;
+      }
+
       return `
         <div class="card channel-card rounded-2xl p-4 cursor-pointer animate-slide-up" 
              style="animation-delay: ${index * 0.06}s; border-left: 4px solid #059669;"
@@ -452,14 +477,18 @@ function renderDashboard() {
             <h3 class="font-bold text-primary text-[15px]">${escapeHtml(channel.name)}</h3>
             <span class="text-[11px] text-muted bg-gray-100 px-2 py-1 rounded-lg">${recordCount} 条</span>
           </div>
-          <div class="flex items-end justify-between">
-            <div>
-              <p class="text-[11px] text-muted mb-1">最新资产</p>
-              <p class="text-[15px] font-bold text-primary num-highlight">${formatMoney(total)}</p>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-emerald-50 rounded-xl px-2 py-2">
+              <p class="text-[10px] text-gray-500 mb-0.5">当年收益</p>
+              <p class="text-[13px] font-bold num-highlight ${chYearReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}">${formatMoney(chYearReturn)}</p>
             </div>
-            <div class="text-right">
-              <p class="text-[11px] text-muted mb-1">累计收益</p>
-              <p class="text-xl font-bold num-highlight ${moneyClass(cumulative)}">${formatMoney(cumulative)}</p>
+            <div class="bg-blue-50 rounded-xl px-2 py-2">
+              <p class="text-[10px] text-gray-500 mb-0.5">当年充值</p>
+              <p class="text-[13px] font-bold num-highlight text-gray-700">${formatMoney(chYearRecharge)}</p>
+            </div>
+            <div class="bg-gray-50 rounded-xl px-2 py-2">
+              <p class="text-[10px] text-gray-500 mb-0.5">当年收益率</p>
+              <p class="text-[13px] font-bold num-highlight ${chYearReturnRate >= 0 ? 'text-emerald-600' : 'text-red-500'}">${formatPercent(chYearReturnRate)}</p>
             </div>
           </div>
         </div>
