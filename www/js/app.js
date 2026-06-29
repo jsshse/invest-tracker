@@ -289,9 +289,14 @@ function renderDashboard() {
   const totalCumulativeEl = document.getElementById('totalCumulative');
   const channelCountEl = document.getElementById('channelCount');
   const recordCountEl = document.getElementById('recordCount');
+  const yearReturnEl = document.getElementById('yearReturn');
+  const yearRechargeEl = document.getElementById('yearRecharge');
 
+  const currentYear = new Date().getFullYear();
   let totalCumulative = 0;
   let totalRecords = 0;
+  let yearReturn = 0;
+  let yearRecharge = 0;
 
   state.channels.forEach((channel) => {
     const latest = channel.records[channel.records.length - 1];
@@ -299,18 +304,32 @@ function renderDashboard() {
       totalCumulative += latest.cumulativeReturn;
       totalRecords += channel.records.length;
     }
+    channel.records.forEach((record) => {
+      const recordYear = new Date(record.date).getFullYear();
+      if (recordYear === currentYear) {
+        yearReturn += record.intervalReturn;
+        yearRecharge += record.intervalRecharge;
+      }
+    });
   });
 
-  totalCumulativeEl.textContent = formatMoney(totalCumulative);
-  totalCumulativeEl.className = `text-3xl font-bold ${moneyClass(totalCumulative)}`;
+  totalCumulativeEl.textContent = `¥${Math.abs(totalCumulative).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  totalCumulativeEl.className = `text-[42px] font-bold tracking-tight leading-none mb-4 num-highlight text-white`;
   channelCountEl.textContent = state.channels.length;
   recordCountEl.textContent = totalRecords;
+  yearReturnEl.textContent = `¥${Math.abs(yearReturn).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  yearReturnEl.className = `text-lg font-bold num-highlight ${yearReturn >= 0 ? 'text-white' : 'text-red-300'}`;
+  yearRechargeEl.textContent = `¥${Math.abs(yearRecharge).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  yearRechargeEl.className = `text-lg font-bold num-highlight ${yearRecharge >= 0 ? 'text-white' : 'text-red-300'}`;
 
   if (state.channels.length === 0) {
     listEl.innerHTML = `
-      <div class="text-center py-10 text-muted">
-        <p class="mb-2">还没有投资渠道</p>
-        <p class="text-xs">点击右上角“新增渠道”开始记录</p>
+      <div class="text-center py-12 px-6">
+        <div class="w-16 h-16 mx-auto mb-4 bg-positive-soft rounded-3xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <p class="font-semibold text-primary mb-1">还没有投资渠道</p>
+        <p class="text-xs text-muted">点击"新增"按钮开始记录收益</p>
       </div>
     `;
     return;
@@ -321,22 +340,23 @@ function renderDashboard() {
       const latest = channel.records[channel.records.length - 1];
       const total = latest ? latest.totalValue : 0;
       const cumulative = latest ? latest.cumulativeReturn : 0;
+      const recordCount = channel.records.length;
       return `
-        <div class="card rounded-xl p-4 cursor-pointer hover:border-accent/50 transition-colors animate-slide-up" 
-             style="animation-delay: ${index * 0.05}s"
+        <div class="card channel-card rounded-2xl p-4 cursor-pointer animate-slide-up" 
+             style="animation-delay: ${index * 0.06}s"
              onclick="openChannel('${channel.id}')">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="font-semibold text-primary">${escapeHtml(channel.name)}</h3>
-            <span class="text-xs text-muted">${channel.records.length} 条记录</span>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-primary text-[15px]">${escapeHtml(channel.name)}</h3>
+            <span class="text-[11px] text-muted bg-bg px-2 py-1 rounded-lg">${recordCount} 条</span>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-end justify-between">
             <div>
-              <p class="text-xs text-muted mb-0.5">最新资产</p>
-              <p class="text-base font-medium">${formatMoney(total)}</p>
+              <p class="text-[11px] text-muted mb-1">最新资产</p>
+              <p class="text-[15px] font-bold text-primary num-highlight">${formatMoney(total)}</p>
             </div>
             <div class="text-right">
-              <p class="text-xs text-muted mb-0.5">累计收益</p>
-              <p class="text-base font-bold ${moneyClass(cumulative)}">${formatMoney(cumulative)}</p>
+              <p class="text-[11px] text-muted mb-1">累计收益</p>
+              <p class="text-xl font-bold num-highlight ${moneyClass(cumulative)}">${formatMoney(cumulative)}</p>
             </div>
           </div>
         </div>
@@ -358,16 +378,19 @@ function renderChannelDetail(channelId) {
 
   const totalEl = document.getElementById('channelTotal');
   const cumulativeEl = document.getElementById('channelCumulative');
-  totalEl.textContent = formatMoney(total);
-  cumulativeEl.textContent = formatMoney(cumulative);
-  cumulativeEl.className = `text-lg font-bold ${moneyClass(cumulative)}`;
+  totalEl.textContent = `¥${Math.abs(total).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  cumulativeEl.textContent = `¥${Math.abs(cumulative).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  cumulativeEl.className = `text-2xl font-bold num-highlight ${moneyClass(cumulative)}`;
 
   const listEl = document.getElementById('recordsList');
   if (channel.records.length === 0) {
     listEl.innerHTML = `
-      <div class="text-center py-10 text-muted">
-        <p class="mb-2">暂无记录</p>
-        <p class="text-xs">点击“记一笔”添加第一条记录</p>
+      <div class="text-center py-12 px-6">
+        <div class="w-16 h-16 mx-auto mb-4 bg-accent-soft rounded-3xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <p class="font-semibold text-primary mb-1">暂无记录</p>
+        <p class="text-xs text-muted">点击"记一笔"添加第一条记录</p>
       </div>
     `;
     return;
@@ -377,38 +400,40 @@ function renderChannelDetail(channelId) {
   listEl.innerHTML = reversed
     .map((record, index) => {
       return `
-        <div class="card rounded-xl p-4 animate-slide-up" style="animation-delay: ${index * 0.05}s">
+        <div class="card record-item rounded-2xl p-4 animate-slide-up" style="animation-delay: ${index * 0.05}s">
           <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-primary">${formatDate(record.date)}</span>
+            <span class="text-[13px] font-bold text-primary">${formatDate(record.date)}</span>
             <button onclick="deleteRecord('${channelId}', '${record.id}')" 
-                    class="text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded-md hover:bg-red-50 transition-colors">
+                    class="text-[11px] text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
               删除
             </button>
           </div>
-          <div class="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
-            <div>
-              <p class="text-xs text-muted mb-0.5">总金额</p>
-              <p class="font-medium">${formatMoney(record.totalValue)}</p>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-bg rounded-xl px-3 py-2.5">
+              <p class="text-[10px] text-muted mb-1">总金额</p>
+              <p class="text-[13px] font-bold text-primary num-highlight">${formatMoney(record.totalValue)}</p>
             </div>
-            <div>
-              <p class="text-xs text-muted mb-0.5">累计收益</p>
-              <p class="font-bold ${moneyClass(record.cumulativeReturn)}">${formatMoney(record.cumulativeReturn)}</p>
+            <div class="bg-positive-soft rounded-xl px-3 py-2.5">
+              <p class="text-[10px] text-muted mb-1">累计收益</p>
+              <p class="text-[13px] font-bold num-highlight ${moneyClass(record.cumulativeReturn)}">${formatMoney(record.cumulativeReturn)}</p>
             </div>
-            <div>
-              <p class="text-xs text-muted mb-0.5">区间收益</p>
-              <p class="font-medium ${moneyClass(record.intervalReturn)}">${formatMoney(record.intervalReturn)}</p>
+            <div class="bg-accent-soft rounded-xl px-3 py-2.5">
+              <p class="text-[10px] text-muted mb-1">本金余额</p>
+              <p class="text-[13px] font-bold text-primary num-highlight">${formatMoney(record.principal)}</p>
             </div>
-            <div>
-              <p class="text-xs text-muted mb-0.5">收益率</p>
-              <p class="font-bold ${moneyClass(record.intervalReturnRate)}">${formatPercent(record.intervalReturnRate)}</p>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mt-2">
+            <div class="bg-bg rounded-xl px-3 py-2.5">
+              <p class="text-[10px] text-muted mb-1">区间收益</p>
+              <p class="text-[13px] font-bold num-highlight ${moneyClass(record.intervalReturn)}">${formatMoney(record.intervalReturn)}</p>
             </div>
-            <div>
-              <p class="text-xs text-muted mb-0.5">充值金额</p>
-              <p class="font-medium">${formatMoney(record.intervalRecharge)}</p>
+            <div class="bg-bg rounded-xl px-3 py-2.5">
+              <p class="text-[10px] text-muted mb-1">收益率</p>
+              <p class="text-[13px] font-bold num-highlight ${moneyClass(record.intervalReturnRate)}">${formatPercent(record.intervalReturnRate)}</p>
             </div>
-            <div>
-              <p class="text-xs text-muted mb-0.5">本金余额</p>
-              <p class="font-medium">${formatMoney(record.principal)}</p>
+            <div class="bg-bg rounded-xl px-3 py-2.5">
+              <p class="text-[10px] text-muted mb-1">充值金额</p>
+              <p class="text-[13px] font-bold text-primary num-highlight">${formatMoney(record.intervalRecharge)}</p>
             </div>
           </div>
         </div>

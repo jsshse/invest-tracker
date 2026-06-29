@@ -3,30 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#F8FAFC">
+  <meta name="theme-color" content="#F0FDF4">
   <title>投资收益记录</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            sans: ['"IBM Plex Sans"', 'sans-serif'],
+            sans: ['"DM Sans"', '"IBM Plex Sans"', 'sans-serif'],
+            mono: ['"IBM Plex Sans"', 'monospace'],
           },
           colors: {
-            bg: '#F8FAFC',
+            bg: '#F0FDF4',
             surface: '#FFFFFF',
             primary: '#0F172A',
-            accent: '#3B82F6',
+            accent: '#2563EB',
             'accent-soft': '#EFF6FF',
-            cta: '#4F46E5',
+            cta: '#4F46E5,
             muted: '#64748B',
             border: '#E2E8F0',
             positive: '#059669',
+            'positive-soft': '#ECFDF5',
             negative: '#DC2626',
+            'negative-soft': '#FEF2F2',
+            gold: '#F59E0B',
+            'gold-soft': '#FFFBEB',
           }
         }
       }
@@ -37,42 +42,59 @@
 <body class="bg-bg text-primary font-sans antialiased min-h-screen">
   <div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative overflow-hidden">
     <!-- Header -->
-    <header class="px-5 pt-6 pb-4 bg-bg/90 backdrop-blur-md sticky top-0 z-20 border-b border-border">
+    <header class="px-5 pt-6 pb-3 bg-bg/80 backdrop-blur-xl sticky top-0 z-20">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-xl font-bold tracking-tight">投资收益记录</h1>
-          <p class="text-xs text-muted mt-0.5">像算油耗一样算收益</p>
+          <h1 class="text-lg font-bold tracking-tight">投资收益记录</h1>
+          <p class="text-[11px] text-muted mt-0.5">像算油耗一样算收益</p>
         </div>
-        <button id="btnExport" class="p-2 rounded-xl bg-surface border border-border text-muted hover:text-accent hover:border-accent/30 transition-colors" title="导出数据">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <button id="btnExport" class="p-2.5 rounded-2xl bg-surface border border-border text-muted hover:text-accent hover:border-accent/30 transition-all shadow-sm" title="导出数据">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
       </div>
     </header>
 
     <!-- Views -->
-    <main class="flex-1 px-5 py-4 overflow-y-auto">
+    <main class="flex-1 px-5 pb-6 overflow-y-auto">
       <!-- Dashboard View -->
-      <section id="viewDashboard" class="space-y-4">
-        <!-- Summary Card -->
-        <div class="card rounded-2xl p-5">
-          <p class="text-sm text-muted mb-1">总累计收益</p>
-          <div id="totalCumulative" class="text-3xl font-bold text-positive">¥0.00</div>
-          <div class="flex gap-4 mt-4 text-sm">
-            <div>
-              <span class="text-muted block text-xs">渠道数</span>
-              <span id="channelCount" class="font-semibold">0</span>
+      <section id="viewDashboard" class="space-y-5">
+        <!-- Hero Card -->
+        <div class="hero-card rounded-3xl p-6 text-white relative overflow-hidden">
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800"></div>
+          <div class="absolute inset-0 opacity-10">
+            <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-white/20"></div>
+            <div class="absolute -left-5 -bottom-5 w-28 h-28 rounded-full bg-white/10"></div>
+          </div>
+          <div class="relative z-10">
+            <p class="text-white/70 text-sm font-medium mb-1">总累计收益</p>
+            <div id="totalCumulative" class="text-[42px] font-bold tracking-tight leading-none mb-4">¥0.00</div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3">
+                <p class="text-white/60 text-[11px] mb-0.5">当年收益</p>
+                <p id="yearReturn" class="text-lg font-bold">¥0.00</p>
+              </div>
+              <div class="bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-3">
+                <p class="text-white/60 text-[11px] mb-0.5">当年充值</p>
+                <p id="yearRecharge" class="text-lg font-bold">¥0.00</p>
+              </div>
             </div>
-            <div>
-              <span class="text-muted block text-xs">总记录数</span>
-              <span id="recordCount" class="font-semibold">0</span>
+            <div class="flex gap-5 mt-4 pt-3 border-t border-white/20 text-sm">
+              <div>
+                <span class="text-white/60 text-[11px] block">渠道数</span>
+                <span id="channelCount" class="font-bold text-lg">0</span>
+              </div>
+              <div>
+                <span class="text-white/60 text-[11px] block">总记录数</span>
+                <span id="recordCount" class="font-bold text-lg">0</span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Import -->
-        <div class="flex items-center justify-between">
-          <label for="importFile" class="text-sm text-muted cursor-pointer hover:text-primary transition-colors flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="flex items-center justify-between px-1">
+          <label for="importFile" class="text-xs text-muted cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             导入备份
           </label>
           <input type="file" id="importFile" accept="application/json" class="hidden">
@@ -80,10 +102,10 @@
 
         <!-- Channels List -->
         <div>
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-base font-semibold">投资渠道</h2>
-            <button id="btnAddChannel" class="text-sm px-3 py-1.5 rounded-lg bg-cta/10 text-cta font-medium hover:bg-cta/20 transition-colors">
-              + 新增渠道
+          <div class="flex items-center justify-between mb-3 px-1">
+            <h2 class="text-sm font-bold text-primary/80 uppercase tracking-wider">投资渠道</h2>
+            <button id="btnAddChannel" class="text-xs px-3 py-1.5 rounded-xl bg-accent text-white font-semibold hover:bg-accent/90 transition-all shadow-sm shadow-accent/20">
+              + 新增
             </button>
           </div>
           <div id="channelsList" class="space-y-3">
@@ -94,32 +116,32 @@
 
       <!-- Channel Detail View -->
       <section id="viewChannel" class="hidden space-y-4">
-        <button id="btnBack" class="flex items-center gap-1 text-sm text-muted hover:text-primary transition-colors mb-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <button id="btnBack" class="flex items-center gap-1 text-sm text-muted hover:text-primary transition-colors mb-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           返回首页
         </button>
 
         <div class="flex items-center justify-between">
           <h2 id="channelTitle" class="text-xl font-bold">渠道名称</h2>
-          <button id="btnDeleteChannel" class="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-            删除渠道
+          <button id="btnDeleteChannel" class="text-xs px-3 py-1.5 rounded-xl bg-red-50 text-red-500 font-medium hover:bg-red-100 transition-colors">
+            删除
           </button>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <div class="card rounded-xl p-4">
-            <p class="text-xs text-muted mb-1">最新总资产</p>
-            <p id="channelTotal" class="text-lg font-bold text-primary">--</p>
+          <div class="card rounded-2xl p-4 border-l-4 border-l-accent">
+            <p class="text-[11px] text-muted mb-1 font-medium">最新总资产</p>
+            <p id="channelTotal" class="text-2xl font-bold text-primary tracking-tight">--</p>
           </div>
-          <div class="card rounded-xl p-4">
-            <p class="text-xs text-muted mb-1">累计收益</p>
-            <p id="channelCumulative" class="text-lg font-bold text-positive">--</p>
+          <div class="card rounded-2xl p-4 border-l-4 border-l-positive">
+            <p class="text-[11px] text-muted mb-1 font-medium">累计收益</p>
+            <p id="channelCumulative" class="text-2xl font-bold tracking-tight">--</p>
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-2">
-          <h3 class="text-base font-semibold">历史记录</h3>
-          <button id="btnAddRecord" class="text-sm px-3 py-1.5 rounded-lg bg-accent/10 text-accent font-medium hover:bg-accent/20 transition-colors">
+        <div class="flex items-center justify-between pt-1 px-1">
+          <h3 class="text-sm font-bold text-primary/80 uppercase tracking-wider">历史记录</h3>
+          <button id="btnAddRecord" class="text-xs px-3 py-1.5 rounded-xl bg-accent text-white font-semibold hover:bg-accent/90 transition-all shadow-sm shadow-accent/20">
             + 记一笔
           </button>
         </div>
@@ -132,47 +154,47 @@
 
     <!-- Channel Modal -->
     <div id="channelModal" class="fixed inset-0 z-50 hidden">
-      <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="channelModalOverlay"></div>
-      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-surface rounded-t-2xl md:rounded-2xl p-5 border border-border shadow-2xl">
-        <h3 id="channelModalTitle" class="text-lg font-bold mb-4">新增渠道</h3>
-        <label class="block text-sm text-muted mb-1.5">渠道名称</label>
-        <input type="text" id="channelNameInput" placeholder="例如：股票账户" class="w-full bg-bg border border-border rounded-xl px-4 py-3 text-primary placeholder-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
+      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="channelModalOverlay"></div>
+      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-surface rounded-t-3xl md:rounded-3xl p-6 border border-border shadow-2xl">
+        <h3 id="channelModalTitle" class="text-lg font-bold mb-5">新增渠道</h3>
+        <label class="block text-xs text-muted mb-2 font-medium">渠道名称</label>
+        <input type="text" id="channelNameInput" placeholder="例如：股票账户" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary placeholder-muted/50 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
         <div class="flex gap-3 mt-6">
-          <button id="btnCancelChannel" class="flex-1 py-3 rounded-xl border border-border text-primary hover:bg-bg transition-colors">取消</button>
-          <button id="btnSaveChannel" class="flex-1 py-3 rounded-xl bg-cta text-white font-medium hover:bg-cta/90 transition-colors">保存</button>
+          <button id="btnCancelChannel" class="flex-1 py-3.5 rounded-2xl border border-border text-primary font-medium hover:bg-bg transition-colors">取消</button>
+          <button id="btnSaveChannel" class="flex-1 py-3.5 rounded-2xl bg-cta text-white font-semibold hover:bg-cta/90 transition-all shadow-lg shadow-cta/25">保存</button>
         </div>
       </div>
     </div>
 
     <!-- Record Modal -->
     <div id="recordModal" class="fixed inset-0 z-50 hidden">
-      <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" id="recordModalOverlay"></div>
-      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-surface rounded-t-2xl md:rounded-2xl p-5 border border-border shadow-2xl">
-        <h3 class="text-lg font-bold mb-4">记录收益</h3>
+      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="recordModalOverlay"></div>
+      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-surface rounded-t-3xl md:rounded-3xl p-6 border border-border shadow-2xl">
+        <h3 class="text-lg font-bold mb-5">记录收益</h3>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm text-muted mb-1.5">日期</label>
-            <input type="date" id="recordDateInput" class="w-full bg-bg border border-border rounded-xl px-4 py-3 text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
+            <label class="block text-xs text-muted mb-2 font-medium">日期</label>
+            <input type="date" id="recordDateInput" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
           </div>
           <div>
-            <label class="block text-sm text-muted mb-1.5">总金额 (¥)</label>
-            <input type="number" id="recordTotalInput" placeholder="0.00" step="0.01" class="w-full bg-bg border border-border rounded-xl px-4 py-3 text-primary placeholder-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
+            <label class="block text-xs text-muted mb-2 font-medium">总金额 (¥)</label>
+            <input type="number" id="recordTotalInput" placeholder="0.00" step="0.01" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary text-lg font-semibold placeholder-muted/40 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
           </div>
           <div>
-            <label class="block text-sm text-muted mb-1.5">累计收益 (¥)</label>
-            <input type="number" id="recordCumulativeInput" placeholder="0.00" step="0.01" class="w-full bg-bg border border-border rounded-xl px-4 py-3 text-primary placeholder-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
-            <p class="text-xs text-muted mt-1.5">App 会自动算出本次区间收益、收益率和充值金额。</p>
+            <label class="block text-xs text-muted mb-2 font-medium">累计收益 (¥)</label>
+            <input type="number" id="recordCumulativeInput" placeholder="0.00" step="0.01" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary text-lg font-semibold placeholder-muted/40 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
+            <p class="text-[11px] text-muted mt-2">App 自动算出区间收益、收益率和充值金额</p>
           </div>
         </div>
         <div class="flex gap-3 mt-6">
-          <button id="btnCancelRecord" class="flex-1 py-3 rounded-xl border border-border text-primary hover:bg-bg transition-colors">取消</button>
-          <button id="btnSaveRecord" class="flex-1 py-3 rounded-xl bg-accent text-white font-semibold hover:bg-accent/90 transition-colors">保存</button>
+          <button id="btnCancelRecord" class="flex-1 py-3.5 rounded-2xl border border-border text-primary font-medium hover:bg-bg transition-colors">取消</button>
+          <button id="btnSaveRecord" class="flex-1 py-3.5 rounded-2xl bg-accent text-white font-semibold hover:bg-accent/90 transition-all shadow-lg shadow-accent/25">保存</button>
         </div>
       </div>
     </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full bg-primary text-white text-sm shadow-xl opacity-0 pointer-events-none transition-opacity z-50">
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 px-5 py-3 rounded-2xl bg-primary text-white text-sm font-medium shadow-2xl opacity-0 pointer-events-none transition-opacity z-50">
       提示信息
     </div>
   </div>
