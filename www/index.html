@@ -178,41 +178,41 @@
 
     <!-- Channel Modal -->
     <div id="channelModal" class="fixed inset-0 z-50 hidden">
-      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="channelModalOverlay"></div>
-      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-surface rounded-t-3xl md:rounded-3xl p-6 border border-border shadow-2xl">
-        <h3 id="channelModalTitle" class="text-lg font-bold mb-5">新增渠道</h3>
-        <label class="block text-xs text-muted mb-2 font-medium">渠道名称</label>
-        <input type="text" id="channelNameInput" placeholder="例如：股票账户" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary placeholder-muted/50 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
+      <div class="absolute inset-0 bg-black/50" id="channelModalOverlay"></div>
+      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm rounded-t-3xl md:rounded-3xl p-6 shadow-2xl" style="background-color: #FFFFFF;">
+        <h3 id="channelModalTitle" class="text-lg font-bold mb-5 text-gray-900">新增渠道</h3>
+        <label class="block text-xs text-gray-500 mb-2 font-medium">渠道名称</label>
+        <input type="text" id="channelNameInput" placeholder="例如：股票账户" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" style="background-color: #F8FAFC;">
         <div class="flex gap-3 mt-6">
-          <button id="btnCancelChannel" class="flex-1 py-3.5 rounded-2xl border-2 border-border text-primary font-medium hover:bg-bg transition-colors">取消</button>
-          <button id="btnSaveChannel" class="flex-1 py-3.5 rounded-2xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-lg">保存</button>
+          <button id="btnCancelChannel" class="flex-1 py-3.5 rounded-2xl border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">取消</button>
+          <button id="btnSaveChannel" class="flex-1 py-3.5 rounded-2xl text-white font-semibold hover:opacity-90 transition-all shadow-lg" style="background-color: #0F172A;">保存</button>
         </div>
       </div>
     </div>
 
     <!-- Record Modal -->
     <div id="recordModal" class="fixed inset-0 z-50 hidden">
-      <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" id="recordModalOverlay"></div>
-      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm bg-surface rounded-t-3xl md:rounded-3xl p-6 border border-border shadow-2xl">
-        <h3 class="text-lg font-bold mb-5">记录收益</h3>
+      <div class="absolute inset-0 bg-black/50" id="recordModalOverlay"></div>
+      <div class="absolute bottom-0 left-0 right-0 md:top-1/2 md:left-1/2 md:bottom-auto md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm rounded-t-3xl md:rounded-3xl p-6 shadow-2xl" style="background-color: #FFFFFF;">
+        <h3 class="text-lg font-bold mb-5 text-gray-900">记录收益</h3>
         <div class="space-y-4">
           <div>
-            <label class="block text-xs text-muted mb-2 font-medium">日期</label>
-            <input type="date" id="recordDateInput" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
+            <label class="block text-xs text-gray-500 mb-2 font-medium">日期</label>
+            <input type="date" id="recordDateInput" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" style="background-color: #F8FAFC;">
           </div>
           <div>
-            <label class="block text-xs text-muted mb-2 font-medium">总金额 (¥)</label>
-            <input type="number" id="recordTotalInput" placeholder="0.00" step="0.01" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary text-lg font-semibold placeholder-muted/40 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
+            <label class="block text-xs text-gray-500 mb-2 font-medium">总金额 (¥)</label>
+            <input type="number" id="recordTotalInput" placeholder="0.00" step="0.01" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-gray-900 text-lg font-semibold placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" style="background-color: #F8FAFC;">
           </div>
           <div>
-            <label class="block text-xs text-muted mb-2 font-medium">累计收益 (¥)</label>
-            <input type="number" id="recordCumulativeInput" placeholder="0.00" step="0.01" class="w-full bg-bg border border-border rounded-2xl px-4 py-3.5 text-primary text-lg font-semibold placeholder-muted/40 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all">
-            <p class="text-[11px] text-muted mt-2">App 自动算出区间收益、收益率和充值金额</p>
+            <label class="block text-xs text-gray-500 mb-2 font-medium">累计收益 (¥)</label>
+            <input type="number" id="recordCumulativeInput" placeholder="0.00" step="0.01" class="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-gray-900 text-lg font-semibold placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" style="background-color: #F8FAFC;">
+            <p class="text-[11px] text-gray-400 mt-2">App 自动算出区间收益、收益率和充值金额</p>
           </div>
         </div>
         <div class="flex gap-3 mt-6">
-          <button id="btnCancelRecord" class="flex-1 py-3.5 rounded-2xl border-2 border-border text-primary font-medium hover:bg-bg transition-colors">取消</button>
-          <button id="btnSaveRecord" class="flex-1 py-3.5 rounded-2xl bg-primary text-white font-semibold hover:bg-primary/90 transition-all shadow-lg">保存</button>
+          <button id="btnCancelRecord" class="flex-1 py-3.5 rounded-2xl border-2 border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">取消</button>
+          <button id="btnSaveRecord" class="flex-1 py-3.5 rounded-2xl text-white font-semibold hover:opacity-90 transition-all shadow-lg" style="background-color: #0F172A;">保存</button>
         </div>
       </div>
     </div>
