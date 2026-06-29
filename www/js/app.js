@@ -34,7 +34,7 @@ function initBiometric() {
   const app = document.getElementById('app');
 
   // Check if biometric is available
-  const isCapacitor = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
+  const isCapacitor = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric;
   
   if (!isCapacitor) {
     // Browser - skip biometric
@@ -50,7 +50,7 @@ function initBiometric() {
 
   btnUnlock.addEventListener('click', async () => {
     try {
-      const result = await window.Capacitor.Plugins.BiometricAuth.verify({
+      const result = await window.Capacitor.Plugins.NativeBiometric.verify({
         reason: '请验证指纹以访问投资记录',
       });
       
