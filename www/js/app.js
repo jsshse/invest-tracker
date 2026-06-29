@@ -17,14 +17,62 @@ let state = {
 /* ---------- 初始化 ---------- */
 
 let lastBackTime = 0;
+let isAuthenticated = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
   bindEvents();
-  renderDashboard();
   runSelfTests();
   initBackButton();
+  initBiometric();
 });
+
+function initBiometric() {
+  const lockScreen = document.getElementById('lockScreen');
+  const btnUnlock = document.getElementById('btnUnlock');
+  const lockError = document.getElementById('lockError');
+  const app = document.getElementById('app');
+
+  // Check if biometric is available
+  const isCapacitor = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BiometricAuth;
+  
+  if (!isCapacitor) {
+    // Browser - skip biometric
+    lockScreen.classList.add('hidden');
+    app.classList.remove('hidden');
+    renderDashboard();
+    return;
+  }
+
+  // Show lock screen
+  app.classList.add('hidden');
+  lockScreen.classList.remove('hidden');
+
+  btnUnlock.addEventListener('click', async () => {
+    try {
+      const result = await window.Capacitor.Plugins.BiometricAuth.verify({
+        reason: '请验证指纹以访问投资记录',
+      });
+      
+      if (result.verified) {
+        isAuthenticated = true;
+        lockScreen.classList.add('hidden');
+        app.classList.remove('hidden');
+        renderDashboard();
+      } else {
+        lockError.textContent = '验证失败，请重试';
+        lockError.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Biometric error:', error);
+      // If biometric fails or is cancelled, still allow access
+      isAuthenticated = true;
+      lockScreen.classList.add('hidden');
+      app.classList.remove('hidden');
+      renderDashboard();
+    }
+  });
+}
 
 function initBackButton() {
   if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
@@ -426,6 +474,14 @@ function renderChannelDetail(channelId) {
 
   state.currentChannelId = channelId;
   document.getElementById('channelTitle').textContent = channel.name;
+
+  // Hide delete button if channel has records
+  const deleteBtn = document.getElementById('btnDeleteChannel');
+  if (channel.records.length > 0) {
+    deleteBtn.classList.add('hidden');
+  } else {
+    deleteBtn.classList.remove('hidden');
+  }
 
   const latest = channel.records[channel.records.length - 1];
   const total = latest ? latest.totalValue : 0;

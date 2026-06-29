@@ -17,6 +17,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
-    "@capacitor/filesystem": "^8.1.2"
+    "@capacitor/filesystem": "^8.1.2",
+    "capacitor-native-biometric": "^4.2.2"
   }
 }
