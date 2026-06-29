@@ -16,12 +16,40 @@ let state = {
 
 /* ---------- 初始化 ---------- */
 
+let lastBackTime = 0;
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
   bindEvents();
   renderDashboard();
   runSelfTests();
+  initBackButton();
 });
+
+function initBackButton() {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+    window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
+      const viewChannel = document.getElementById('viewChannel');
+      const isOnChannelDetail = !viewChannel.classList.contains('hidden');
+
+      if (isOnChannelDetail) {
+        // On channel detail page, go back to dashboard
+        state.currentChannelId = null;
+        showView('viewDashboard');
+        renderDashboard();
+      } else {
+        // On dashboard, double tap to exit
+        const now = Date.now();
+        if (now - lastBackTime < 2000) {
+          window.Capacitor.Plugins.App.exitApp();
+        } else {
+          lastBackTime = now;
+          showToast('再按一次退出应用');
+        }
+      }
+    });
+  }
+}
 
 /* ---------- 数据模型 ---------- */
 
