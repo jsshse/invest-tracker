@@ -178,6 +178,9 @@ function recalcChannel(channel) {
 
 /* ---------- 持久化 ---------- */
 
+const BACKUP_DIR = 'Download';
+const BACKUP_FILE = 'invest_tracker_backup.json';
+
 function getFilesystem() {
   if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
     return window.Capacitor.Plugins.Filesystem;
@@ -185,10 +188,10 @@ function getFilesystem() {
   return null;
 }
 
+// 保存到 App 私有目录（快速读写）
 async function saveData() {
   const data = JSON.stringify(state.channels);
 
-  // 本地文件持久化（手机端优先，不会被清缓存删掉）
   const fs = getFilesystem();
   if (fs) {
     try {
@@ -199,6 +202,8 @@ async function saveData() {
         recursive: true,
         encoding: 'utf8',
       });
+      // 同时备份到 Downloads 目录（卸载后可恢复）
+      await backupToDownloads(data);
     } catch (e) {
       console.error('Filesystem save failed:', e);
       showToast('文件保存失败');
@@ -216,9 +221,53 @@ async function saveData() {
   }
 }
 
+// 备份到 Downloads 目录（卸载后保留）
+async function backupToDownloads(data) {
+  const fs = getFilesystem();
+  if (!fs) return;
+
+  try {
+    await fs.writeFile({
+      path: BACKUP_FILE,
+      data,
+      directory: BACKUP_DIR,
+      encoding: 'utf8',
+    });
+  } catch (e) {
+    console.error('Backup to Downloads failed:', e);
+  }
+}
+
+// 从 Downloads 目录恢复数据
+async function restoreFromDownloads() {
+  const fs = getFilesystem();
+  if (!fs) return false;
+
+  try {
+    const result = await fs.readFile({
+      path: BACKUP_FILE,
+      directory: BACKUP_DIR,
+      encoding: 'utf8',
+    });
+    if (result && result.data) {
+      const channels = JSON.parse(result.data);
+      if (Array.isArray(channels) && channels.length > 0) {
+        state.channels = channels;
+        state.channels.forEach(recalcChannel);
+        await saveData();
+        return true;
+      }
+    }
+  } catch (e) {
+    console.log('No backup found in Downloads:', e);
+  }
+  return false;
+}
+
 async function loadData() {
   const fs = getFilesystem();
 
+  // 1. 尝试从 App 私有目录加载
   if (fs) {
     try {
       const result = await fs.readFile({
@@ -232,17 +281,20 @@ async function loadData() {
         return;
       }
     } catch (e) {
-      // 文件不存在或读取失败，尝试 localStorage 迁移
-      console.log('Filesystem load failed, falling back to localStorage:', e);
+      console.log('Filesystem load failed, trying backup:', e);
     }
   }
 
+  // 2. 尝试从 Downloads 备份恢复
+  const restored = await restoreFromDownloads();
+  if (restored) return;
+
+  // 3. 尝试从 localStorage 加载
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       state.channels = JSON.parse(raw);
       state.channels.forEach(recalcChannel);
-      // 如果本地文件不存在但 localStorage 有数据，迁移到文件
       if (fs && state.channels.length > 0) {
         saveData();
       }
