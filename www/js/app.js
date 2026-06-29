@@ -24,7 +24,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindEvents();
   runSelfTests();
   initBackButton();
-  initBiometric();
+  
+  // Wait for Capacitor to be ready
+  if (window.Capacitor) {
+    console.log('Capacitor detected, waiting for ready...');
+    // Capacitor is already loaded in the webview
+    setTimeout(() => {
+      initBiometric();
+    }, 500);
+  } else {
+    console.log('No Capacitor, running in browser');
+    initBiometric();
+  }
 });
 
 function initBiometric() {
@@ -36,8 +47,11 @@ function initBiometric() {
   // Check if biometric is available
   const isCapacitor = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric;
   
+  console.log('Biometric check:', { isCapacitor, plugins: window.Capacitor?.Plugins });
+  
   if (!isCapacitor) {
     // Browser - skip biometric
+    console.log('Biometric not available, skipping lock screen');
     lockScreen.classList.add('hidden');
     app.classList.remove('hidden');
     renderDashboard();
@@ -45,14 +59,17 @@ function initBiometric() {
   }
 
   // Show lock screen
+  console.log('Showing lock screen');
   app.classList.add('hidden');
   lockScreen.classList.remove('hidden');
 
   btnUnlock.addEventListener('click', async () => {
+    console.log('Unlock button clicked');
     try {
       const result = await window.Capacitor.Plugins.NativeBiometric.verify({
         reason: '请验证指纹以访问投资记录',
       });
+      console.log('Biometric result:', result);
       
       if (result.verified) {
         isAuthenticated = true;
