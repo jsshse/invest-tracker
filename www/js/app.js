@@ -44,14 +44,21 @@ function initBiometric() {
   const lockError = document.getElementById('lockError');
   const app = document.getElementById('app');
 
-  // 检查 Capacitor 是否可用
+  // 详细检查 Capacitor 状态
+  console.log('=== 指纹验证初始化 ===');
+  console.log('window.Capacitor:', !!window.Capacitor);
+  console.log('window.Capacitor.Plugins:', window.Capacitor?.Plugins ? Object.keys(window.Capacitor.Plugins) : '不存在');
+  console.log('NativeBiometric 插件:', !!window.Capacitor?.Plugins?.NativeBiometric);
+  
   const isCapacitor = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric;
   
-  console.log('指纹验证检查:', { isCapacitor, plugins: Object.keys(window.Capacitor?.Plugins || {}) });
-  
   if (!isCapacitor) {
+    console.log('未检测到指纹插件，可能原因:');
+    console.log('1. 在浏览器中运行（非 APK）');
+    console.log('2. 插件未正确加载');
+    console.log('3. 需要重新构建 APK');
+    
     // 浏览器环境 - 跳过指纹验证
-    console.log('浏览器环境，跳过指纹验证');
     lockScreen.classList.add('hidden');
     app.classList.remove('hidden');
     renderDashboard();
@@ -59,7 +66,7 @@ function initBiometric() {
   }
 
   // 显示锁屏
-  console.log('显示指纹锁屏');
+  console.log('指纹插件已加载，显示锁屏');
   app.classList.add('hidden');
   lockScreen.classList.remove('hidden');
 
@@ -69,8 +76,9 @@ function initBiometric() {
     
     try {
       // 先检查指纹是否可用
+      console.log('检查指纹可用性...');
       const availability = await window.Capacitor.Plugins.NativeBiometric.isAvailable();
-      console.log('指纹可用性:', availability);
+      console.log('指纹可用性结果:', availability);
       
       if (!availability.isAvailable) {
         lockError.textContent = '设备不支持指纹验证';
@@ -78,7 +86,8 @@ function initBiometric() {
         return;
       }
 
-      // 调用指纹验证（使用 verifyIdentity 方法）
+      // 调用指纹验证
+      console.log('调用指纹验证...');
       await window.Capacitor.Plugins.NativeBiometric.verifyIdentity({
         reason: '请验证指纹以访问投资记录',
         title: '指纹验证',
