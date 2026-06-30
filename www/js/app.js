@@ -228,6 +228,31 @@ function getFilesystem() {
   return null;
 }
 
+// 请求存储权限
+async function requestStoragePermission() {
+  const fs = getFilesystem();
+  if (!fs) return true; // 浏览器环境跳过
+
+  try {
+    // 检查权限状态
+    const permission = await fs.checkPermissions();
+    console.log('存储权限状态:', permission);
+    
+    if (permission.publicStorage === 'granted') {
+      return true;
+    }
+
+    // 请求权限
+    const result = await fs.requestPermissions();
+    console.log('请求权限结果:', result);
+    
+    return result.publicStorage === 'granted';
+  } catch (e) {
+    console.error('权限请求失败:', e);
+    return false;
+  }
+}
+
 // 保存数据
 async function saveData() {
   const data = JSON.stringify(state.channels);
@@ -235,7 +260,7 @@ async function saveData() {
   const fs = getFilesystem();
   if (fs) {
     try {
-      // 保存到 App 私有目录
+      // 保存到 App 私有目录（无需权限）
       await fs.writeFile({
         path: `${DATA_DIR}/${DATA_FILE}`,
         data,
@@ -243,8 +268,15 @@ async function saveData() {
         recursive: true,
         encoding: 'utf8',
       });
-      // 备份到 Downloads 目录
-      await backupToDownloads(data);
+      console.log('保存到私有目录成功');
+      
+      // 请求权限后备份到 Downloads
+      const hasPermission = await requestStoragePermission();
+      if (hasPermission) {
+        await backupToDownloads(data);
+      } else {
+        console.log('无存储权限，跳过备份');
+      }
     } catch (e) {
       console.error('保存失败:', e);
       showToast('文件保存失败');
@@ -294,6 +326,13 @@ async function backupToDownloads(data) {
 async function restoreFromDownloads() {
   const fs = getFilesystem();
   if (!fs) return false;
+
+  // 请求存储权限
+  const hasPermission = await requestStoragePermission();
+  if (!hasPermission) {
+    console.log('无存储权限，无法恢复备份');
+    return false;
+  }
 
   // 尝试从 Downloads 恢复
   try {
