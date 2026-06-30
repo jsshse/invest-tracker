@@ -1,14 +1,13 @@
 :root {
-  --bg: #F0FDF4;
+  --bg: #F8FAFC;
   --surface: #FFFFFF;
   --primary: #0F172A;
-  --accent: #2563EB;
-  --accent-soft: #EFF6FF;
-  --cta: #4F46E5;
+  --accent: #059669;
+  --accent-soft: #ECFDF5;
   --muted: #64748B;
   --border: #E2E8F0;
-  --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.03);
-  --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.04);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -21,24 +20,25 @@ html, body {
 
 body {
   background: var(--bg);
-  color: #0F172A;
+  color: var(--primary);
 }
 
+/* Card styles */
 .card {
   background: var(--surface);
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .card:active {
   transform: scale(0.98);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
 }
 
-/* Custom scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -46,11 +46,15 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 2px;
+  background: #D1D5DB;
+  border-radius: 3px;
 }
 
-/* Input number spinner hide */
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* Input number */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
@@ -61,7 +65,7 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Date input icon color */
+/* Date input */
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.4);
   cursor: pointer;
@@ -71,7 +75,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -80,21 +84,33 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .animate-slide-up {
-  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideUp 0.3s ease-out forwards;
 }
 
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+/* Channel card */
+.channel-card {
+  transition: all 0.2s ease;
+  border-left: 3px solid #059669;
 }
 
-.animate-pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
+.channel-card:active {
+  transform: scale(0.98);
 }
 
-/* Hero card glow effect */
-.hero-card {
-  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.2), 0 4px 12px rgba(5, 150, 105, 0.1);
+/* Number highlight */
+.num-highlight {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Record item */
+.record-item {
+  transition: all 0.2s ease;
+}
+
+.record-item:active {
+  transform: scale(0.98);
+  background: #F9FAFB;
 }
 
 /* Modal transition */
@@ -123,37 +139,23 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
-/* Positive / Negative values */
+/* Text colors */
 .text-positive {
-  color: #059669;
-}
-
-.text-negative {
   color: #DC2626;
 }
 
-/* Channel card hover */
-.channel-card {
-  transition: all 0.2s ease;
+.text-negative {
+  color: #059669;
 }
 
-.channel-card:hover {
-  border-color: #2563EB;
-  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+/* Scrollable containers */
+#channelsList {
+  width: 100%;
 }
 
-/* Number highlight */
-.num-highlight {
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-/* Record item */
-.record-item {
-  transition: all 0.2s ease;
-}
-
-.record-item:active {
-  transform: scale(0.98);
-  background: #F8FAFC;
+/* 确保滚动容器有固定高度 */
+#channelRecordsScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }

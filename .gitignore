@@ -10,3 +10,5 @@ android/app/release/
 screenshot_*.png
 test_app.py
 docs/
+release.keystore
+keystore_base64.txt

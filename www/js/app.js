@@ -7,11 +7,14 @@
 const STORAGE_KEY = 'investTrackerData';
 const DATA_DIR = 'investTracker';
 const DATA_FILE = 'data.json';
+const RECORDS_PER_PAGE = 10;
 
 let state = {
   channels: [],
   currentChannelId: null,
   editingChannelId: null,
+  recordsPage: 1,
+  allRecords: [],
 };
 
 /* ---------- 初始化 ---------- */
@@ -518,14 +521,22 @@ function showView(viewId) {
 
 function formatMoney(value) {
   const num = Number(value) || 0;
-  const sign = num > 0 ? '+' : '';
-  return `${sign}¥${num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const absNum = Math.abs(num);
+  const formatted = absNum.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (num < 0) {
+    return `-¥${formatted}`;
+  }
+  return `¥${formatted}`;
 }
 
 function formatPercent(value) {
   const num = Number(value) || 0;
-  const sign = num > 0 ? '+' : '';
-  return `${sign}${num.toFixed(2)}%`;
+  const absNum = Math.abs(num);
+  const formatted = absNum.toFixed(2);
+  if (num < 0) {
+    return `-${formatted}%`;
+  }
+  return `+${formatted}%`;
 }
 
 function formatDate(dateStr) {
@@ -552,7 +563,6 @@ function renderDashboard() {
   let totalRecords = 0;
   let yearReturn = 0;
   let yearRecharge = 0;
-  let principalAtStartOfYear = 0;
 
   state.channels.forEach((channel) => {
     const latest = channel.records[channel.records.length - 1];
@@ -560,54 +570,74 @@ function renderDashboard() {
       totalRecords += channel.records.length;
     }
 
-    // Find principal at start of year (last record before current year)
+    // 按日期排序记录
     const sortedRecords = [...channel.records].sort((a, b) => new Date(a.date) - new Date(b.date));
-    let lastRecordBeforeYear = null;
-    let firstRecordThisYear = null;
-
-    sortedRecords.forEach((record) => {
-      const recordYear = new Date(record.date).getFullYear();
-      if (recordYear < currentYear) {
-        lastRecordBeforeYear = record;
-      }
+    
+    // 找到今年的最新一条记录及其上一条
+    let latestRecordThisYear = null;
+    let prevRecord = null;
+    
+    for (let i = sortedRecords.length - 1; i >= 0; i--) {
+      const recordYear = new Date(sortedRecords[i].date).getFullYear();
       if (recordYear === currentYear) {
-        yearReturn += record.intervalReturn;
-        yearRecharge += record.intervalRecharge;
-        if (!firstRecordThisYear) firstRecordThisYear = record;
+        if (!latestRecordThisYear) {
+          latestRecordThisYear = sortedRecords[i];
+        } else {
+          // 这是今年的倒数第二条，就是上一条
+          prevRecord = sortedRecords[i];
+          break;
+        }
+      } else if (recordYear < currentYear) {
+        // 找到去年的最后一条
+        prevRecord = sortedRecords[i];
+        break;
       }
-    });
+    }
 
-    // Use last record before year, or first record of this year if no prior records
-    if (lastRecordBeforeYear) {
-      principalAtStartOfYear += lastRecordBeforeYear.totalValue - lastRecordBeforeYear.cumulativeReturn;
-    } else if (firstRecordThisYear) {
-      principalAtStartOfYear += firstRecordThisYear.principal - firstRecordThisYear.intervalRecharge;
+    // 当年收益 = 今年最新累计收益 - 上一条累计收益，没有上一条则为0
+    if (latestRecordThisYear) {
+      const prevCumulative = prevRecord ? prevRecord.cumulativeReturn : 0;
+      yearReturn += latestRecordThisYear.cumulativeReturn - prevCumulative;
+      
+      // 当年充值 = 今年最新本金 - 上一条本金
+      const currentPrincipal = latestRecordThisYear.totalValue - latestRecordThisYear.cumulativeReturn;
+      const prevPrincipal = prevRecord ? (prevRecord.totalValue - prevRecord.cumulativeReturn) : 0;
+      yearRecharge += currentPrincipal - prevPrincipal;
+    }
+  });
+
+  // 当前所有渠道的总本金
+  let totalPrincipal = 0;
+  state.channels.forEach((channel) => {
+    const latest = channel.records[channel.records.length - 1];
+    if (latest) {
+      totalPrincipal += latest.totalValue - latest.cumulativeReturn;
     }
   });
 
   channelCountEl.textContent = state.channels.length;
   recordCountEl.textContent = totalRecords;
-  yearReturnEl.textContent = `¥${Math.abs(yearReturn).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  yearReturnEl.className = `text-xl font-bold num-highlight ${yearReturn >= 0 ? 'text-white' : 'text-red-300'}`;
-  yearRechargeEl.textContent = `¥${Math.abs(yearRecharge).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  yearRechargeEl.className = `text-xl font-bold num-highlight ${yearRecharge >= 0 ? 'text-white' : 'text-red-300'}`;
+  yearReturnEl.textContent = formatMoney(yearReturn);
+  yearReturnEl.className = `text-sm font-bold num-highlight ${yearReturn >= 0 ? 'text-red-500' : 'text-emerald-500'}`;
+  yearRechargeEl.textContent = formatMoney(totalPrincipal);
+  yearRechargeEl.className = `text-sm font-bold num-highlight text-gray-900`;
 
-  // Calculate year return rate
+  // 收益率 = 当年收益 / 当前所有本金
   let yearReturnRate = 0;
-  if (principalAtStartOfYear > 0) {
-    yearReturnRate = (yearReturn / principalAtStartOfYear) * 100;
+  if (totalPrincipal > 0) {
+    yearReturnRate = (yearReturn / totalPrincipal) * 100;
   }
-  yearReturnRateEl.textContent = `${yearReturnRate >= 0 ? '+' : ''}${yearReturnRate.toFixed(2)}%`;
-  yearReturnRateEl.className = `text-lg font-bold num-highlight ${yearReturnRate >= 0 ? 'text-white' : 'text-red-300'}`;
+  yearReturnRateEl.textContent = formatPercent(yearReturnRate);
+  yearReturnRateEl.className = `text-sm font-bold num-highlight ${yearReturnRate >= 0 ? 'text-red-500' : 'text-emerald-500'}`;
 
   if (state.channels.length === 0) {
     listEl.innerHTML = `
-      <div class="text-center py-12 px-6">
-        <div class="w-16 h-16 mx-auto mb-4 bg-positive-soft rounded-3xl flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <div class="text-center py-8 px-4">
+        <div class="w-12 h-12 mx-auto mb-3 bg-emerald-100 rounded-2xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
-        <p class="font-semibold text-primary mb-1">还没有投资渠道</p>
-        <p class="text-xs text-muted">点击"新增"按钮开始记录收益</p>
+        <p class="font-semibold text-gray-900 text-sm mb-1">还没有投资渠道</p>
+        <p class="text-[11px] text-gray-500">点击"新增"按钮开始记录收益</p>
       </div>
     `;
     return;
@@ -618,57 +648,72 @@ function renderDashboard() {
       const latest = channel.records[channel.records.length - 1];
       const recordCount = channel.records.length;
 
-      // Calculate year stats for this channel
+      // 计算渠道的年收益统计
       let chYearReturn = 0;
       let chYearRecharge = 0;
-      let chPrincipalAtStart = 0;
       const sortedRecords = [...channel.records].sort((a, b) => new Date(a.date) - new Date(b.date));
-      let lastRecordBeforeYear = null;
-      let firstRecordThisYear = null;
-
-      sortedRecords.forEach((record) => {
-        const recordYear = new Date(record.date).getFullYear();
-        if (recordYear < currentYear) {
-          lastRecordBeforeYear = record;
-        }
+      
+      // 找到今年的最新一条记录及其上一条
+      let latestRecordThisYear = null;
+      let prevRecord = null;
+      
+      for (let i = sortedRecords.length - 1; i >= 0; i--) {
+        const recordYear = new Date(sortedRecords[i].date).getFullYear();
         if (recordYear === currentYear) {
-          chYearReturn += record.intervalReturn;
-          chYearRecharge += record.intervalRecharge;
-          if (!firstRecordThisYear) firstRecordThisYear = record;
+          if (!latestRecordThisYear) {
+            latestRecordThisYear = sortedRecords[i];
+          } else {
+            // 这是今年的倒数第二条，就是上一条
+            prevRecord = sortedRecords[i];
+            break;
+          }
+        } else if (recordYear < currentYear) {
+          // 找到去年的最后一条
+          prevRecord = sortedRecords[i];
+          break;
         }
-      });
-
-      if (lastRecordBeforeYear) {
-        chPrincipalAtStart = lastRecordBeforeYear.totalValue - lastRecordBeforeYear.cumulativeReturn;
-      } else if (firstRecordThisYear) {
-        chPrincipalAtStart = firstRecordThisYear.principal - firstRecordThisYear.intervalRecharge;
       }
 
+      // 当年收益 = 今年最新累计收益 - 上一条累计收益，没有上一条则为0
+      if (latestRecordThisYear) {
+        const prevCumulative = prevRecord ? prevRecord.cumulativeReturn : 0;
+        chYearReturn = latestRecordThisYear.cumulativeReturn - prevCumulative;
+        
+        // 当年充值 = 今年最新本金 - 上一条本金
+        const currentPrincipal = latestRecordThisYear.totalValue - latestRecordThisYear.cumulativeReturn;
+        const prevPrincipal = prevRecord ? (prevRecord.totalValue - prevRecord.cumulativeReturn) : 0;
+        chYearRecharge = currentPrincipal - prevPrincipal;
+      }
+
+      // 当前渠道的本金
+      const chCurrentPrincipal = latest ? (latest.totalValue - latest.cumulativeReturn) : 0;
+
+      // 收益率 = 当年收益 / 当前本金
       let chYearReturnRate = 0;
-      if (chPrincipalAtStart > 0) {
-        chYearReturnRate = (chYearReturn / chPrincipalAtStart) * 100;
+      if (chCurrentPrincipal > 0) {
+        chYearReturnRate = (chYearReturn / chCurrentPrincipal) * 100;
       }
 
       return `
-        <div class="card channel-card rounded-2xl p-4 cursor-pointer animate-slide-up" 
-             style="animation-delay: ${index * 0.06}s; border-left: 4px solid #059669;"
+        <div class="card channel-card rounded-xl p-3 cursor-pointer animate-slide-up" 
+             style="animation-delay: ${index * 0.06}s;"
              onclick="openChannel('${channel.id}')">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-bold text-primary text-[15px]">${escapeHtml(channel.name)}</h3>
-            <span class="text-[11px] text-muted bg-gray-100 px-2 py-1 rounded-lg">${recordCount} 条</span>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-gray-900 text-sm">${escapeHtml(channel.name)}</h3>
+            <span class="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">${recordCount} 条</span>
           </div>
           <div class="grid grid-cols-3 gap-2">
-            <div class="bg-emerald-50 rounded-xl px-2 py-2">
-              <p class="text-[10px] text-gray-500 mb-0.5">当年收益</p>
-              <p class="text-[13px] font-bold num-highlight ${chYearReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}">${formatMoney(chYearReturn)}</p>
+            <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+              <p class="text-[9px] text-gray-500 mb-0.5">当年收益</p>
+              <p class="text-[11px] font-bold num-highlight ${chYearReturn >= 0 ? 'text-red-500' : 'text-emerald-500'}">${formatMoney(chYearReturn)}</p>
             </div>
-            <div class="bg-blue-50 rounded-xl px-2 py-2">
-              <p class="text-[10px] text-gray-500 mb-0.5">当年充值</p>
-              <p class="text-[13px] font-bold num-highlight text-gray-700">${formatMoney(chYearRecharge)}</p>
+            <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+              <p class="text-[9px] text-gray-500 mb-0.5">本金余额</p>
+              <p class="text-[11px] font-bold num-highlight text-gray-900">${formatMoney(chCurrentPrincipal)}</p>
             </div>
-            <div class="bg-gray-50 rounded-xl px-2 py-2">
-              <p class="text-[10px] text-gray-500 mb-0.5">当年收益率</p>
-              <p class="text-[13px] font-bold num-highlight ${chYearReturnRate >= 0 ? 'text-emerald-600' : 'text-red-500'}">${formatPercent(chYearReturnRate)}</p>
+            <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+              <p class="text-[9px] text-gray-500 mb-0.5">当年收益率</p>
+              <p class="text-[11px] font-bold num-highlight ${chYearReturnRate >= 0 ? 'text-red-500' : 'text-emerald-500'}">${formatPercent(chYearReturnRate)}</p>
             </div>
           </div>
         </div>
@@ -682,6 +727,7 @@ function renderChannelDetail(channelId) {
   if (!channel) return;
 
   state.currentChannelId = channelId;
+  state.recordsPage = 1;
   document.getElementById('channelTitle').textContent = channel.name;
 
   // Hide delete button if channel has records
@@ -698,68 +744,119 @@ function renderChannelDetail(channelId) {
 
   const totalEl = document.getElementById('channelTotal');
   const cumulativeEl = document.getElementById('channelCumulative');
-  totalEl.textContent = `¥${Math.abs(total).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  cumulativeEl.textContent = `¥${Math.abs(cumulative).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  cumulativeEl.className = `text-2xl font-bold num-highlight ${cumulative >= 0 ? 'text-white' : 'text-red-300'}`;
+  totalEl.textContent = formatMoney(total);
+  totalEl.className = `text-base font-bold num-highlight text-gray-900`;
+  cumulativeEl.textContent = formatMoney(cumulative);
+  cumulativeEl.className = `text-base font-bold num-highlight text-gray-900`;
 
   const listEl = document.getElementById('recordsList');
   if (channel.records.length === 0) {
     listEl.innerHTML = `
-      <div class="text-center py-12 px-6">
-        <div class="w-16 h-16 mx-auto mb-4 bg-accent-soft rounded-3xl flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <div class="text-center py-8 px-4">
+        <div class="w-12 h-12 mx-auto mb-3 bg-emerald-100 rounded-2xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         </div>
-        <p class="font-semibold text-primary mb-1">暂无记录</p>
-        <p class="text-xs text-muted">点击"记一笔"添加第一条记录</p>
+        <p class="font-semibold text-gray-900 text-sm mb-1">暂无记录</p>
+        <p class="text-[11px] text-gray-500">点击"记一笔"添加第一条记录</p>
       </div>
     `;
     return;
   }
 
-  const reversed = [...channel.records].reverse();
-  listEl.innerHTML = reversed
-    .map((record, index) => {
-      return `
-        <div class="card record-item rounded-2xl p-4 animate-slide-up" style="animation-delay: ${index * 0.05}s">
-          <div class="flex items-center justify-between mb-3">
-            <span class="text-[13px] font-bold text-primary">${formatDate(record.date)}</span>
-            <button onclick="deleteRecord('${channelId}', '${record.id}')" 
-                    class="text-[11px] text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">
-              删除
-            </button>
+  // 保存所有记录用于分页加载
+  state.allRecords = [...channel.records].reverse();
+  const totalPages = Math.ceil(state.allRecords.length / RECORDS_PER_PAGE);
+  const recordsToShow = state.allRecords.slice(0, RECORDS_PER_PAGE);
+
+  listEl.innerHTML = renderRecordItems(recordsToShow, channelId);
+
+  // 如果还有更多记录，添加加载提示
+  if (totalPages > 1) {
+    listEl.innerHTML += `
+      <div id="loadMoreTrigger" class="text-center py-4 text-xs text-gray-400">
+        上拉加载更多...
+      </div>
+    `;
+  }
+
+  // 初始化滚动加载
+  initRecordsScroll();
+}
+
+function renderRecordItems(records, channelId) {
+  return records.map((record, index) => {
+    return `
+      <div class="card record-item rounded-xl p-3 animate-slide-up" style="animation-delay: ${index * 0.05}s">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[12px] font-bold text-gray-900">${formatDate(record.date)}</span>
+          <button onclick="deleteRecord('${channelId}', '${record.id}')" 
+                  class="text-[10px] text-red-500 hover:text-red-600 px-1.5 py-0.5 rounded hover:bg-red-50 transition-colors">
+            删除
+          </button>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+            <p class="text-[9px] text-gray-500 mb-0.5">总金额</p>
+            <p class="text-[11px] font-bold text-gray-900 num-highlight">${formatMoney(record.totalValue)}</p>
           </div>
-          <div class="grid grid-cols-3 gap-3">
-            <div class="bg-bg rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-muted mb-1">总金额</p>
-              <p class="text-[13px] font-bold text-primary num-highlight">${formatMoney(record.totalValue)}</p>
-            </div>
-            <div class="bg-positive-soft rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-muted mb-1">累计收益</p>
-              <p class="text-[13px] font-bold num-highlight ${moneyClass(record.cumulativeReturn)}">${formatMoney(record.cumulativeReturn)}</p>
-            </div>
-            <div class="bg-accent-soft rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-muted mb-1">本金余额</p>
-              <p class="text-[13px] font-bold text-primary num-highlight">${formatMoney(record.principal)}</p>
-            </div>
+          <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+            <p class="text-[9px] text-gray-500 mb-0.5">累计收益</p>
+            <p class="text-[11px] font-bold num-highlight ${moneyClass(record.cumulativeReturn)}">${formatMoney(record.cumulativeReturn)}</p>
           </div>
-          <div class="grid grid-cols-3 gap-3 mt-2">
-            <div class="bg-bg rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-muted mb-1">区间收益</p>
-              <p class="text-[13px] font-bold num-highlight ${moneyClass(record.intervalReturn)}">${formatMoney(record.intervalReturn)}</p>
-            </div>
-            <div class="bg-bg rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-muted mb-1">收益率</p>
-              <p class="text-[13px] font-bold num-highlight ${moneyClass(record.intervalReturnRate)}">${formatPercent(record.intervalReturnRate)}</p>
-            </div>
-            <div class="bg-bg rounded-xl px-3 py-2.5">
-              <p class="text-[10px] text-muted mb-1">充值金额</p>
-              <p class="text-[13px] font-bold text-primary num-highlight">${formatMoney(record.intervalRecharge)}</p>
-            </div>
+          <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+            <p class="text-[9px] text-gray-500 mb-0.5">本金余额</p>
+            <p class="text-[11px] font-bold text-gray-900 num-highlight">${formatMoney(record.principal)}</p>
           </div>
         </div>
-      `;
-    })
-    .join('');
+        <div class="grid grid-cols-3 gap-2 mt-1.5">
+          <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+            <p class="text-[9px] text-gray-500 mb-0.5">区间收益</p>
+            <p class="text-[11px] font-bold num-highlight ${moneyClass(record.intervalReturn)}">${formatMoney(record.intervalReturn)}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+            <p class="text-[9px] text-gray-500 mb-0.5">收益率</p>
+            <p class="text-[11px] font-bold num-highlight ${moneyClass(record.intervalReturnRate)}">${formatPercent(record.intervalReturnRate)}</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg px-2 py-1.5">
+            <p class="text-[9px] text-gray-500 mb-0.5">充值金额</p>
+            <p class="text-[11px] font-bold text-gray-900 num-highlight">${formatMoney(record.intervalRecharge)}</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function loadMoreRecords() {
+  if (!state.currentChannelId) return;
+
+  const channel = state.channels.find((c) => c.id === state.currentChannelId);
+  if (!channel) return;
+
+  const totalPages = Math.ceil(state.allRecords.length / RECORDS_PER_PAGE);
+  if (state.recordsPage >= totalPages) return;
+
+  state.recordsPage++;
+  const endIdx = state.recordsPage * RECORDS_PER_PAGE;
+  const recordsToShow = state.allRecords.slice(0, endIdx);
+
+  const listEl = document.getElementById('recordsList');
+  const trigger = document.getElementById('loadMoreTrigger');
+
+  if (trigger) {
+    trigger.remove();
+  }
+
+  listEl.innerHTML = renderRecordItems(recordsToShow, state.currentChannelId);
+
+  // 如果还有更多记录，添加加载提示
+  if (state.recordsPage < totalPages) {
+    listEl.innerHTML += `
+      <div id="loadMoreTrigger" class="text-center py-4 text-xs text-gray-400">
+        上拉加载更多...
+      </div>
+    `;
+  }
 }
 
 function escapeHtml(text) {
@@ -795,6 +892,24 @@ function bindEvents() {
   document.getElementById('recordModalOverlay').addEventListener('click', closeRecordModal);
   document.getElementById('btnCancelRecord').addEventListener('click', closeRecordModal);
   document.getElementById('btnSaveRecord').addEventListener('click', saveRecordFromModal);
+}
+
+// 无限滚动加载更多记录
+let scrollListenerAttached = false;
+
+function initRecordsScroll() {
+  if (scrollListenerAttached) return;
+  
+  const scrollContainer = document.getElementById('channelRecordsScroll');
+  if (scrollContainer) {
+    scrollContainer.addEventListener('scroll', () => {
+      if (state.currentChannelId && 
+          scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 100) {
+        loadMoreRecords();
+      }
+    });
+    scrollListenerAttached = true;
+  }
 }
 
 /* ---------- 弹窗控制 ---------- */
