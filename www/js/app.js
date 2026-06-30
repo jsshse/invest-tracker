@@ -44,49 +44,73 @@ function initBiometric() {
   const lockError = document.getElementById('lockError');
   const app = document.getElementById('app');
 
-  // Check if biometric is available
+  // 检查 Capacitor 是否可用
   const isCapacitor = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.NativeBiometric;
   
-  console.log('Biometric check:', { isCapacitor, plugins: window.Capacitor?.Plugins });
+  console.log('指纹验证检查:', { isCapacitor, plugins: Object.keys(window.Capacitor?.Plugins || {}) });
   
   if (!isCapacitor) {
-    // Browser - skip biometric
-    console.log('Biometric not available, skipping lock screen');
+    // 浏览器环境 - 跳过指纹验证
+    console.log('浏览器环境，跳过指纹验证');
     lockScreen.classList.add('hidden');
     app.classList.remove('hidden');
     renderDashboard();
     return;
   }
 
-  // Show lock screen
-  console.log('Showing lock screen');
+  // 显示锁屏
+  console.log('显示指纹锁屏');
   app.classList.add('hidden');
   lockScreen.classList.remove('hidden');
 
   btnUnlock.addEventListener('click', async () => {
-    console.log('Unlock button clicked');
+    console.log('点击验证按钮');
+    lockError.classList.add('hidden');
+    
     try {
+      // 调用指纹验证
       const result = await window.Capacitor.Plugins.NativeBiometric.verify({
         reason: '请验证指纹以访问投资记录',
+        title: '指纹验证',
       });
-      console.log('Biometric result:', result);
       
-      if (result.verified) {
+      console.log('指纹验证结果:', result);
+      
+      if (result && result.verified) {
+        // 验证成功
         isAuthenticated = true;
         lockScreen.classList.add('hidden');
         app.classList.remove('hidden');
         renderDashboard();
+        showToast('验证成功');
       } else {
+        // 验证失败
         lockError.textContent = '验证失败，请重试';
         lockError.classList.remove('hidden');
       }
     } catch (error) {
-      console.error('Biometric error:', error);
-      // If biometric fails or is cancelled, still allow access
-      isAuthenticated = true;
-      lockScreen.classList.add('hidden');
-      app.classList.remove('hidden');
-      renderDashboard();
+      console.error('指纹验证错误:', error);
+      
+      // 用户取消验证
+      if (error.code === 'UserCanceled' || error.message?.includes('cancel')) {
+        lockError.textContent = '已取消验证';
+        lockError.classList.remove('hidden');
+      } 
+      // 设备不支持指纹
+      else if (error.code === 'BiometryNotAvailable' || error.message?.includes('not available')) {
+        lockError.textContent = '设备不支持指纹验证';
+        lockError.classList.remove('hidden');
+      }
+      // 没有注册指纹
+      else if (error.code === 'BiometryNotEnrolled' || error.message?.includes('not enrolled')) {
+        lockError.textContent = '请先在系统设置中注册指纹';
+        lockError.classList.remove('hidden');
+      }
+      // 其他错误
+      else {
+        lockError.textContent = `验证出错: ${error.message || '未知错误'}`;
+        lockError.classList.remove('hidden');
+      }
     }
   });
 }
@@ -195,7 +219,6 @@ function recalcChannel(channel) {
 
 /* ---------- 持久化 ---------- */
 
-const BACKUP_DIR = 'Download';
 const BACKUP_FILE = 'invest_tracker_backup.json';
 
 function getFilesystem() {
@@ -205,13 +228,14 @@ function getFilesystem() {
   return null;
 }
 
-// 保存到 App 私有目录（快速读写）
+// 保存数据
 async function saveData() {
   const data = JSON.stringify(state.channels);
 
   const fs = getFilesystem();
   if (fs) {
     try {
+      // 保存到 App 私有目录
       await fs.writeFile({
         path: `${DATA_DIR}/${DATA_FILE}`,
         data,
@@ -219,39 +243,50 @@ async function saveData() {
         recursive: true,
         encoding: 'utf8',
       });
-      // 同时备份到 Downloads 目录（卸载后可恢复）
+      // 备份到 Downloads 目录
       await backupToDownloads(data);
     } catch (e) {
-      console.error('Filesystem save failed:', e);
+      console.error('保存失败:', e);
       showToast('文件保存失败');
     }
   }
 
-  // 浏览器调试或降级备份
+  // 浏览器备份
   try {
     localStorage.setItem(STORAGE_KEY, data);
   } catch (e) {
-    console.error('localStorage save failed:', e);
-    if (!fs) {
-      showToast('保存失败：存储空间不足');
-    }
+    console.error('localStorage 保存失败:', e);
   }
 }
 
-// 备份到 Downloads 目录（卸载后保留）
+// 备份到 Downloads 目录
 async function backupToDownloads(data) {
   const fs = getFilesystem();
   if (!fs) return;
 
   try {
+    // 使用 Filesystem.Directory.Downloads 常量
     await fs.writeFile({
       path: BACKUP_FILE,
       data,
-      directory: BACKUP_DIR,
+      directory: 'Downloads',
       encoding: 'utf8',
     });
+    console.log('备份到 Downloads 成功');
   } catch (e) {
-    console.error('Backup to Downloads failed:', e);
+    console.error('备份到 Downloads 失败:', e);
+    // 尝试使用 FilesystemDir.Downloads
+    try {
+      await fs.writeFile({
+        path: BACKUP_FILE,
+        data,
+        directory: 'DOCUMENTS',
+        encoding: 'utf8',
+      });
+      console.log('备份到 DOCUMENTS 成功');
+    } catch (e2) {
+      console.error('备份到 DOCUMENTS 也失败:', e2);
+    }
   }
 }
 
@@ -260,10 +295,11 @@ async function restoreFromDownloads() {
   const fs = getFilesystem();
   if (!fs) return false;
 
+  // 尝试从 Downloads 恢复
   try {
     const result = await fs.readFile({
       path: BACKUP_FILE,
-      directory: BACKUP_DIR,
+      directory: 'Downloads',
       encoding: 'utf8',
     });
     if (result && result.data) {
@@ -272,12 +308,35 @@ async function restoreFromDownloads() {
         state.channels = channels;
         state.channels.forEach(recalcChannel);
         await saveData();
+        console.log('从 Downloads 恢复成功');
         return true;
       }
     }
   } catch (e) {
-    console.log('No backup found in Downloads:', e);
+    console.log('Downloads 无备份');
   }
+
+  // 尝试从 DOCUMENTS 恢复
+  try {
+    const result = await fs.readFile({
+      path: BACKUP_FILE,
+      directory: 'DOCUMENTS',
+      encoding: 'utf8',
+    });
+    if (result && result.data) {
+      const channels = JSON.parse(result.data);
+      if (Array.isArray(channels) && channels.length > 0) {
+        state.channels = channels;
+        state.channels.forEach(recalcChannel);
+        await saveData();
+        console.log('从 DOCUMENTS 恢复成功');
+        return true;
+      }
+    }
+  } catch (e) {
+    console.log('DOCUMENTS 无备份');
+  }
+
   return false;
 }
 
