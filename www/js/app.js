@@ -68,49 +68,53 @@ function initBiometric() {
     lockError.classList.add('hidden');
     
     try {
-      // 调用指纹验证
-      const result = await window.Capacitor.Plugins.NativeBiometric.verify({
+      // 先检查指纹是否可用
+      const availability = await window.Capacitor.Plugins.NativeBiometric.isAvailable();
+      console.log('指纹可用性:', availability);
+      
+      if (!availability.isAvailable) {
+        lockError.textContent = '设备不支持指纹验证';
+        lockError.classList.remove('hidden');
+        return;
+      }
+
+      // 调用指纹验证（使用 verifyIdentity 方法）
+      await window.Capacitor.Plugins.NativeBiometric.verifyIdentity({
         reason: '请验证指纹以访问投资记录',
         title: '指纹验证',
+        subtitle: '投资收益记录',
+        negativeButtonText: '取消',
       });
       
-      console.log('指纹验证结果:', result);
+      console.log('指纹验证成功');
       
-      if (result && result.verified) {
-        // 验证成功
-        isAuthenticated = true;
-        lockScreen.classList.add('hidden');
-        app.classList.remove('hidden');
-        renderDashboard();
-        showToast('验证成功');
-      } else {
-        // 验证失败
-        lockError.textContent = '验证失败，请重试';
-        lockError.classList.remove('hidden');
-      }
+      // 验证成功
+      isAuthenticated = true;
+      lockScreen.classList.add('hidden');
+      app.classList.remove('hidden');
+      renderDashboard();
+      showToast('验证成功');
     } catch (error) {
       console.error('指纹验证错误:', error);
       
-      // 用户取消验证
-      if (error.code === 'UserCanceled' || error.message?.includes('cancel')) {
+      // 根据错误码显示不同提示
+      const errorCode = error.code || error.message;
+      
+      if (errorCode === 'USER_CANCEL' || errorCode === 'UserCanceled') {
         lockError.textContent = '已取消验证';
-        lockError.classList.remove('hidden');
-      } 
-      // 设备不支持指纹
-      else if (error.code === 'BiometryNotAvailable' || error.message?.includes('not available')) {
+      } else if (errorCode === 'BIOMETRICS_UNAVAILABLE' || errorCode === 'BiometryNotAvailable') {
         lockError.textContent = '设备不支持指纹验证';
-        lockError.classList.remove('hidden');
-      }
-      // 没有注册指纹
-      else if (error.code === 'BiometryNotEnrolled' || error.message?.includes('not enrolled')) {
+      } else if (errorCode === 'BIOMETRICS_NOT_ENROLLED' || errorCode === 'BiometryNotEnrolled') {
         lockError.textContent = '请先在系统设置中注册指纹';
-        lockError.classList.remove('hidden');
-      }
-      // 其他错误
-      else {
+      } else if (errorCode === 'AUTHENTICATION_FAILED') {
+        lockError.textContent = '指纹验证失败，请重试';
+      } else if (errorCode === 'USER_LOCKOUT') {
+        lockError.textContent = '指纹验证锁定，请稍后再试';
+      } else {
         lockError.textContent = `验证出错: ${error.message || '未知错误'}`;
-        lockError.classList.remove('hidden');
       }
+      
+      lockError.classList.remove('hidden');
     }
   });
 }
