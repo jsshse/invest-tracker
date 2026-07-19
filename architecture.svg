@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700">
+  <defs>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap");
+      text { font-family: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    </style>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect width="960" height="700" fill="#f8fafc"/>
+
+  <!-- header -->
+  <rect x="0" y="0" width="960" height="60" fill="url(#headerGrad)"/>
+  <text x="480" y="38" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="700">投资账本 - 技术架构图</text>
+
+  <!-- layer 1: web ui -->
+  <rect x="40" y="80" width="880" height="120" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="60" y="102" fill="#059669" font-size="12" font-weight="600">用户界面层 (Web)</text>
+
+  <rect x="80" y="115" width="160" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="160" y="145" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="600">index.html</text>
+  <text x="160" y="165" text-anchor="middle" fill="#64748b" font-size="11">主页面结构</text>
+
+  <rect x="280" y="115" width="160" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="360" y="145" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="600">style.css</text>
+  <text x="360" y="165" text-anchor="middle" fill="#64748b" font-size="11">样式定义</text>
+
+  <rect x="480" y="115" width="160" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="560" y="145" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="600">app.js</text>
+  <text x="560" y="165" text-anchor="middle" fill="#64748b" font-size="11">业务逻辑 (1100行)</text>
+
+  <rect x="680" y="115" width="180" height="70" rx="8" fill="#06b6d4" stroke="#0891b2" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="770" y="145" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">Tailwind CSS</text>
+  <text x="770" y="165" text-anchor="middle" fill="#e0f2fe" font-size="11">CDN 引入</text>
+
+  <!-- layer 2: capacitor -->
+  <rect x="40" y="220" width="880" height="120" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="60" y="242" fill="#3b82f6" font-size="12" font-weight="600">Capacitor 框架层</text>
+
+  <rect x="80" y="255" width="200" height="70" rx="8" fill="#3b82f6" stroke="#2563eb" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="180" y="285" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">@capacitor/core</text>
+  <text x="180" y="305" text-anchor="middle" fill="#dbeafe" font-size="11">桥接Web与原生</text>
+
+  <rect x="320" y="255" width="180" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="410" y="285" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="600">@capacitor/cli</text>
+  <text x="410" y="305" text-anchor="middle" fill="#64748b" font-size="11">构建工具</text>
+
+  <rect x="540" y="255" width="200" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="640" y="285" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="600">@capacitor/android</text>
+  <text x="640" y="305" text-anchor="middle" fill="#64748b" font-size="11">Android平台支持</text>
+
+  <rect x="780" y="255" width="120" height="70" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="840" y="285" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="600">config.json</text>
+  <text x="840" y="305" text-anchor="middle" fill="#64748b" font-size="10">配置文件</text>
+
+  <!-- layer 3: plugins -->
+  <rect x="40" y="360" width="880" height="120" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="60" y="382" fill="#f59e0b" font-size="12" font-weight="600">原生插件层</text>
+
+  <rect x="80" y="395" width="180" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="170" y="425" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Filesystem</text>
+  <text x="170" y="445" text-anchor="middle" fill="#64748b" font-size="11">文件存储</text>
+
+  <rect x="300" y="395" width="180" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="390" y="425" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">NativeBiometric</text>
+  <text x="390" y="445" text-anchor="middle" fill="#64748b" font-size="11">指纹验证</text>
+
+  <rect x="520" y="395" width="180" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="610" y="425" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">@capacitor/app</text>
+  <text x="610" y="445" text-anchor="middle" fill="#64748b" font-size="11">应用生命周期</text>
+
+  <rect x="740" y="395" width="150" height="70" rx="8" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="815" y="425" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="600">Cordova兼容</text>
+  <text x="815" y="445" text-anchor="middle" fill="#64748b" font-size="10">第三方插件</text>
+
+  <!-- layer 4: android -->
+  <rect x="40" y="500" width="880" height="120" rx="8" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="60" y="522" fill="#ec4899" font-size="12" font-weight="600">Android 原生层</text>
+
+  <rect x="80" y="535" width="160" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="160" y="565" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Android SDK</text>
+  <text x="160" y="585" text-anchor="middle" fill="#64748b" font-size="11">API 22+</text>
+
+  <rect x="280" y="535" width="160" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="360" y="565" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Gradle 8.14</text>
+  <text x="360" y="585" text-anchor="middle" fill="#64748b" font-size="11">构建系统</text>
+
+  <rect x="480" y="535" width="160" height="70" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="560" y="565" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="600">Java 21</text>
+  <text x="560" y="585" text-anchor="middle" fill="#64748b" font-size="11">运行环境</text>
+
+  <rect x="680" y="535" width="200" height="70" rx="8" fill="#ec4899" stroke="#db2777" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="780" y="565" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="600">invest-tracker.apk</text>
+  <text x="780" y="585" text-anchor="middle" fill="#fce7f3" font-size="11">最终产物</text>
+
+  <!-- arrows -->
+  <line x1="180" y1="185" x2="180" y2="255" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="560" y1="185" x2="560" y2="255" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="180" y1="325" x2="170" y2="395" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="410" y1="325" x2="390" y2="395" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="170" y1="465" x2="160" y2="535" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="390" y1="465" x2="360" y2="535" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="610" y1="465" x2="560" y2="535" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- legend -->
+  <rect x="40" y="640" width="880" height="50" rx="6" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="662" fill="#64748b" font-size="12" font-weight="600">技术栈:</text>
+  <rect x="140" y="650" width="12" height="12" rx="2" fill="#059669"/>
+  <text x="158" y="661" fill="#0f172a" font-size="11">Web前端</text>
+  <rect x="240" y="650" width="12" height="12" rx="2" fill="#3b82f6"/>
+  <text x="258" y="661" fill="#0f172a" font-size="11">Capacitor框架</text>
+  <rect x="380" y="650" width="12" height="12" rx="2" fill="#f59e0b"/>
+  <text x="398" y="661" fill="#0f172a" font-size="11">原生插件</text>
+  <rect x="500" y="650" width="12" height="12" rx="2" fill="#ec4899"/>
+  <text x="518" y="661" fill="#0f172a" font-size="11">Android原生</text>
+  <text x="60" y="685" fill="#64748b" font-size="11">数据流: 用户界面 -> Capacitor桥接 -> 原生插件 -> Android系统 -> APK输出</text>
+
+</svg>
